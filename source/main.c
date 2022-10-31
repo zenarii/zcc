@@ -30,9 +30,16 @@ int main() {
     
     printf("Lexing code\n%s\n", buffer);
     
-    char * cursor = buffer;
-    while(*cursor)
-        cursor = GetNextToken(cursor);
+    Tokeniser tokeniser = {0};
+    tokeniser.buffer = buffer;
     
+    Token token = {0};
+    int print_limit = 0;
+    do {
+        token = GetNextTokenAndAdvance(&tokeniser);
+        PrintToken(token);
+        
+        if(print_limit++ > 10) break;
+    } while (token.type != TOKEN_INVALID);
     return 0;
 }

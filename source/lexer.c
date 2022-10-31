@@ -29,6 +29,10 @@ struct Token {
 };
 
 typedef struct Tokeniser Tokeniser;
+struct Tokeniser {
+    char * buffer;
+    // todo store like, line info etc
+};
 
 void PrintToken(Token token) {
     switch(token.type) {
@@ -65,7 +69,7 @@ void PrintToken(Token token) {
         } break;
         
         case (TOKEN_LITERAL_INT): {
-            printf("TOKEN: LITERAL: INT (%d)\n", token.value);
+            printf("TOKEN: LITERAL: INT (%d) \n", token.value);
         } break;
         
         case (TOKEN_IDENTIFIER): {
@@ -74,7 +78,7 @@ void PrintToken(Token token) {
     }
 }
 
-char * GetNextToken(char * string) {
+Token PeekToken(char * string) {
     Token token = {0};
     
     char * cursor = string;
@@ -111,7 +115,7 @@ char * GetNextToken(char * string) {
                     tail++;
                 }
                 token.value = value;
-                token.string_length = cursor - tail;
+                token.string_length = tail - cursor;
                 cursor = tail;
                 
                 goto found_token;
@@ -191,12 +195,16 @@ char * GetNextToken(char * string) {
                 token.type = TOKEN_BRACE_OPEN;
                 cursor += 1;
                 
+                token.string_length = 1;
+                
                 goto found_token;
             } break;
             
             case '}': {
                 token.type = TOKEN_BRACE_CLOSE;
                 cursor += 1;
+                
+                token.string_length = 1;
                 
                 goto found_token;
             } break;
@@ -205,12 +213,16 @@ char * GetNextToken(char * string) {
                 token.type = TOKEN_PARENTHESIS_OPEN;
                 cursor += 1;
                 
+                token.string_length = 1;
+                
                 goto found_token;
             } break;
             
             case ')': {
                 token.type = TOKEN_PARENTHESIS_CLOSE;
                 cursor += 1;
+                
+                token.string_length = 1;
                 
                 goto found_token;
             } break;
@@ -219,13 +231,25 @@ char * GetNextToken(char * string) {
                 token.type = TOKEN_SEMICOLON;
                 cursor += 1;
                 
+                token.string_length = 1;
+                
                 goto found_token;
             } break;
         }
     }
     
-    found_token:;
-    PrintToken(token);
     
-    return cursor;
+    found_token:;
+    //PrintToken(token);
+    
+    return token;
+}
+
+Token GetNextTokenAndAdvance(Tokeniser * tokeniser) {
+    while(CharIsWhiteSpace(*tokeniser->buffer)) {
+        tokeniser->buffer++;
+    }
+    Token token = PeekToken(tokeniser->buffer);
+    tokeniser->buffer += token.string_length;
+    return token;
 }
