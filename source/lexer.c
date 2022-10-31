@@ -184,6 +184,11 @@ Token PeekToken(char * string) {
                     tail++;
                 }
                 
+                if(StringCompareN(token.string, "int", MAX(token.string_length, 3)))
+                    token.type = TOKEN_KEYWORD_INT;
+                else if(StringCompareN(token.string, "return", MAX(token.string_length, 6)))
+                    token.type = TOKEN_KEYWORD_RETURN;
+                
                 token.string_length = tail - cursor;
                 cursor = tail;
                 
