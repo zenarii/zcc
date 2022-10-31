@@ -16,6 +16,11 @@ enum TokenType {
     
     TOKEN_IDENTIFIER,
     TOKEN_LITERAL_INT,
+    
+    // Note(abiab): Operators
+    TOKEN_EXCLAM,
+    TOKEN_TILDE,
+    TOKEN_MINUS,
 };
 
 typedef struct Token Token;
@@ -74,7 +79,19 @@ void PrintToken(Token token) {
         
         case (TOKEN_IDENTIFIER): {
             printf("TOKEN: IDENTIFIER (%.*s)\n", token.string_length, token.string);
-        }
+        } break;
+        
+        case (TOKEN_EXCLAM): {
+            printf("TOKEN: EXCALMATION (!) (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_MINUS): {
+            printf("TOKEN: MINUS (-) (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_TILDE): {
+            printf("TOKEN: TILDE (~) (%d)\n", token.type);
+        } break;
     }
 }
 
@@ -236,6 +253,31 @@ Token PeekToken(char * string) {
                 token.type = TOKEN_SEMICOLON;
                 cursor += 1;
                 
+                token.string_length = 1;
+                
+                goto found_token;
+            } break;
+            
+            case '~': {
+                token.type = TOKEN_TILDE;
+                cursor += 1;
+                token.string_length = 1;
+                
+                goto found_token;
+            } break;
+            
+            
+            case '!': {
+                token.type = TOKEN_EXCLAM;
+                cursor += 1;
+                token.string_length = 1;
+                
+                goto found_token;
+            } break;
+            
+            case '-': {
+                token.type = TOKEN_MINUS;
+                cursor += 1;
                 token.string_length = 1;
                 
                 goto found_token;
