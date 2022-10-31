@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MAX(a, b) ((a > b) ? (a) : (b))
+
 #include "char.c"
 #include "lexer.c"
+#include "parser.c"
 
 int main() {
     // Note(abiab): Load the source file into a string. Currently hard coded
@@ -33,13 +36,17 @@ int main() {
     Tokeniser tokeniser = {0};
     tokeniser.buffer = buffer;
     
-    Token token = {0};
-    int print_limit = 0;
+#if 0
+    Token = {0};
+    
     do {
         token = GetNextTokenAndAdvance(&tokeniser);
         PrintToken(token);
-        
-        if(print_limit++ > 10) break;
     } while (token.type != TOKEN_INVALID);
+#endif
+    
+    AstNode * root = ParseProgram(&tokeniser);
+    PrettyPrintAST(root, 0);
+    
     return 0;
 }
