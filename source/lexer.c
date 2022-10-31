@@ -260,8 +260,10 @@ Token PeekToken(char * string) {
             
             case '~': {
                 token.type = TOKEN_TILDE;
-                cursor += 1;
+                token.string = cursor;
                 token.string_length = 1;
+                
+                cursor += 1;
                 
                 goto found_token;
             } break;
@@ -269,16 +271,20 @@ Token PeekToken(char * string) {
             
             case '!': {
                 token.type = TOKEN_EXCLAM;
-                cursor += 1;
+                token.string = cursor;
                 token.string_length = 1;
+                
+                cursor += 1;
                 
                 goto found_token;
             } break;
             
             case '-': {
                 token.type = TOKEN_MINUS;
-                cursor += 1;
+                token.string = cursor;
                 token.string_length = 1;
+                
+                cursor += 1;
                 
                 goto found_token;
             } break;
