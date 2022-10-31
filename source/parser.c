@@ -8,9 +8,18 @@ enum AstNodeType {
     AST_NODE_EXPRESSION,
 };
 
+typedef enum AstNodeExpressionType AstNodeExpressionType;
+enum AstNodeExpressionType {
+    EXPRESSION_INVALID,
+    
+    EXPRESSION_INT_LITERAL,
+    EXPRESSION_UNARY_OPERATOR,
+};
+
 typedef struct AstNode AstNode;
 struct AstNode {
     AstNodeType type;
+    int subtype;
     
     AstNode * child;
     
@@ -20,6 +29,9 @@ struct AstNode {
     
     // for integer literal
     int int_literal_value;
+    
+    // for unary operator
+    char unary_operator_character;
 };
 
 
@@ -31,13 +43,23 @@ AstNode * ParseExpression(Tokeniser * tokeniser) {
     AstNode * expression = &nodes[node_count++];
     expression->type = AST_NODE_EXPRESSION;
     
-    if(PeekToken(tokeniser->buffer).type != TOKEN_LITERAL_INT) {
-        printf("[Error] Expression expected int literal\n");
+    TokenType token_type = PeekToken(tokeniser->buffer).type;
+    if(token_type == TOKEN_LITERAL_INT) {
+        Token int_literal = GetNextTokenAndAdvance(tokeniser);
+        expression->int_literal_value = int_literal.value;
+        expression->subtype = EXPRESSION_INT_LITERAL;
+    }
+    else if(token_type == TOKEN_MINUS || token_type == TOKEN_TILDE || token_type == TOKEN_EXCLAM) {
+        Token unary_operator = GetNextTokenAndAdvance(tokeniser);
+        expression->unary_operator_character = *unary_operator.string;
+        printf("found %c\n", expression->unary_operator_character);
+        expression->child = ParseExpression(tokeniser);
+        expression->subtype = EXPRESSION_UNARY_OPERATOR;
+    }
+    else {
+        printf("[Error] Expression requires either int literal or unary operator, handed neither\n");
         return 0;
     }
-    Token int_literal = GetNextTokenAndAdvance(tokeniser);
-    
-    expression->int_literal_value = int_literal.value;
     
     return expression;
 }
@@ -155,7 +177,20 @@ void PrettyPrintAST(AstNode * node, int depth) {
         } break;
         
         case AST_NODE_EXPRESSION: {
-            printf("INT<%d>", node->int_literal_value);
+            if (node->subtype == EXPRESSION_UNARY_OPERATOR) {
+                if     (node->unary_operator_character == '-') printf("NEGATE(");
+                else if(node->unary_operator_character == '~') printf("BITWISECOMP(");
+                else if(node->unary_operator_character == '!') printf("LOGNEGATE(");
+                
+                PrettyPrintAST(node->child, depth);
+                printf(")");
+            }
+            else if(node->subtype == EXPRESSION_INT_LITERAL) {
+                printf("INT<%d>", node->int_literal_value);
+            }
+            else {
+                printf("INVALID EXPRESSION!");
+            }
         } break;
     }
 }
