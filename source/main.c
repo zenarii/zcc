@@ -6,6 +6,7 @@
 #include "char.c"
 #include "lexer.c"
 #include "parser.c"
+#include "generator.c"
 
 int main() {
     // Note(abiab): Load the source file into a string. Currently hard coded
@@ -46,7 +47,14 @@ int main() {
 #endif
     
     AstNode * root = ParseProgram(&tokeniser);
-    PrettyPrintAST(root, 0);
+    //PrettyPrintAST(root, 0);
+    
+    const char * output_path = "assembly.s";
+    FILE * file = fopen(output_path, "w");
+    GenerateAsmFromAst(file, root);
+    fclose(file);
+    
+    system("gcc assembly.s -o out");
     
     return 0;
 }
