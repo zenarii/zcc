@@ -8,9 +8,15 @@
 #include "parser.c"
 #include "generator.c"
 
-int main() {
+int main(int args, char * argv[]) {
     // Note(abiab): Load the source file into a string. Currently hard coded
-    const char * path = "../test_programs/negate.c";
+    
+    char * path;
+    if(args == 2) path = argv[1];
+    else {
+        printf("Need one argument for compilation");
+    };
+    
     char * buffer;
     {
         FILE * file = fopen(path, "r");
