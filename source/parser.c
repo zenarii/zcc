@@ -8,6 +8,8 @@ enum AstNodeType {
     AST_NODE_EXPRESSION,
 };
 
+// TODO(abiab): make nodes for unary/binary operations
+
 typedef enum AstNodeExpressionType AstNodeExpressionType;
 enum AstNodeExpressionType {
     EXPRESSION_INVALID,
@@ -52,7 +54,6 @@ AstNode * ParseExpression(Tokeniser * tokeniser) {
     else if(token_type == TOKEN_MINUS || token_type == TOKEN_TILDE || token_type == TOKEN_EXCLAM) {
         Token unary_operator = GetNextTokenAndAdvance(tokeniser);
         expression->unary_operator_character = *unary_operator.string;
-        printf("found %c\n", expression->unary_operator_character);
         expression->child = ParseExpression(tokeniser);
         expression->subtype = EXPRESSION_UNARY_OPERATOR;
     }
