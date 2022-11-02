@@ -40,6 +40,26 @@ struct AstNode {
 // TODO(abi): for now use an array of ast nodes, later make the size editable.
 static AstNode nodes[128];
 static int node_count;
+static int parse_failed;
+
+// TODO(abiab): may require different skupping of tokens etc depending on where the error is thrown.
+void ParserFail(Tokeniser * tokeniser, const char * error_message) {
+    parse_failed = 1;
+    printf("[Error] %s:%d; %s\n", 
+           tokeniser->file_name, tokeniser->line_number, error_message);
+    
+    // Note(abiab): advance the tokens to the next ; or } as to find further errors, as
+    //              well as not to give incorrect errors
+    while(1) {
+        Token token = PeekToken(tokeniser->buffer);
+        if(token.type == TOKEN_SEMICOLON ||
+           token.type == TOKEN_BRACE_CLOSE || 
+           token.type == TOKEN_INVALID) {
+            break;
+        }
+        GetNextTokenAndAdvance(tokeniser);
+    }
+}
 
 AstNode * ParseExpression(Tokeniser * tokeniser) {
     AstNode * expression = &nodes[node_count++];
@@ -58,7 +78,8 @@ AstNode * ParseExpression(Tokeniser * tokeniser) {
         expression->subtype = EXPRESSION_UNARY_OPERATOR;
     }
     else {
-        printf("[Error] Expression requires either int literal or unary operator, handed neither\n");
+        ParserFail(tokeniser,
+                   "Expected integer literal");
         return 0;
     }
     
@@ -70,15 +91,17 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     statement->type = AST_NODE_STATEMENT;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_KEYWORD_RETURN) {
-        printf("[Error] Statement expected keyword 'return'\n");
+        ParserFail(tokeniser, "Expected keyword 'return' at start of statement");
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
     
     statement->child = ParseExpression(tokeniser);
     
+    // Note(abi): until just ; considered a valid statement, occasionally hitting this error
+    //            error will erroneuously throw an 'expected }' error; (i believe)
     if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-        printf("[Error] Statement expected ';'\n");
+        ParserFail(tokeniser, "Expected ';'");
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
@@ -91,15 +114,14 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     function->type = AST_NODE_FUNCTION;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_KEYWORD_INT) {
-        // TODO(abi): Better errors
-        printf("[Error] expected int, didn't get it");
+        ParserFail(tokeniser, "Expected keyword int");
         return 0;
     }
     
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_IDENTIFIER) {
-        printf("[Error] expected an identifier, didn't get it");
+        ParserFail(tokeniser, "Expected identifier");
         return 0;
     }
     
@@ -108,19 +130,19 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     function->function_name_length = identifier.string_length;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_OPEN) {
-        printf("expected (");
+        ParserFail(tokeniser, "Expected (");
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_CLOSE) {
-        printf("expected )");
+        ParserFail(tokeniser, "Expected )");
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_BRACE_OPEN) {
-        printf("expected {");
+        ParserFail(tokeniser, "Expected {");
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
@@ -128,7 +150,7 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     function->child = ParseStatement(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_BRACE_CLOSE) {
-        printf("expected }");
+        ParserFail(tokeniser, "Expected }");
         return 0;
     }
     

@@ -36,7 +36,8 @@ struct Token {
 typedef struct Tokeniser Tokeniser;
 struct Tokeniser {
     char * buffer;
-    // todo store like, line info etc
+    int line_number;
+    const char * file_name;
 };
 
 void PrintToken(Token token) {
@@ -300,6 +301,7 @@ Token PeekToken(char * string) {
 
 Token GetNextTokenAndAdvance(Tokeniser * tokeniser) {
     while(CharIsWhiteSpace(*tokeniser->buffer)) {
+        if(*tokeniser->buffer == '\n') tokeniser->line_number++;
         tokeniser->buffer++;
     }
     Token token = PeekToken(tokeniser->buffer);
