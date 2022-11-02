@@ -16,6 +16,18 @@ function test_program () {
 	rm out
 }
 
+function test_invalid() {
+	~/dev/ccompiler/build/zcc --delete-asm $1
+	if [ $? == 1 ]
+	then
+		echo -e "${GREEN}[Passed] $1 ${CLEAR}"
+	else
+		echo -e "${RED}[FAILED] $1 ${CLEAR}"
+	fi
+}
+
+
+echo "[Info] testing valid code"
 test_program not_zero.c 1
 test_program not_seven.c 0
 # Note(abiab): as bash values mapped 0 to 255, expect the value to be 256 - 20;
@@ -24,3 +36,10 @@ test_program bitwise.c 240
 test_program bitwise_zero.c 255
 test_program nested_one.c 255
 test_program nested_two.c 2
+echo
+
+echo "[Info] testing invalid code"
+test_invalid invalid-no_semicolon.c
+test_invalid invalid-no_int_literal.c
+test_invalid invalid-nested_op_missing_int.c
+test_invalid invalid-wrong_order.c
