@@ -8,14 +8,14 @@
 #include "parser.c"
 #include "generator.c"
 
-void Compile(const char * path, const char * output_path, int delete_asm) {
+int Compile(const char * path, const char * output_path, int delete_asm) {
     
     char * buffer;
     {
         FILE * file = fopen(path, "r");
         if (file == 0) {
             printf("[Error] unable to open %s\n", path);
-            return;
+            return 1;
         }
         
         fseek(file, 0L, SEEK_END);
@@ -35,6 +35,8 @@ void Compile(const char * path, const char * output_path, int delete_asm) {
     
     Tokeniser tokeniser = {0};
     tokeniser.buffer = buffer;
+    tokeniser.line_number = 1;
+    tokeniser.file_name = path;
     
 #if 0
     Token token = {0};
@@ -48,8 +50,9 @@ void Compile(const char * path, const char * output_path, int delete_asm) {
 #endif
     
     AstNode * root = ParseProgram(&tokeniser);
+    if(parse_failed) return 1;
     
-#if 1
+#if 0
     PrettyPrintAST(root, 0);
 #endif
     
@@ -66,11 +69,15 @@ void Compile(const char * path, const char * output_path, int delete_asm) {
     if(delete_asm) {
         system("rm assembly.s");
     }
+    
+    return 0;
 }
 
 int main(int argc, char * argv[]) {
     char * output_path = "out";
     int delete_asm = 0;
+    
+    int compilation_failed = 0;
     
     for(int i = 1; i < argc; i++) {
         if (StringCompareN("-o", argv[i], 2)) {
@@ -81,9 +88,10 @@ int main(int argc, char * argv[]) {
             delete_asm = 1;
         }
         else {
-            Compile(argv[i], output_path, delete_asm);
+            compilation_failed = Compile(argv[i], output_path, delete_asm);
         }
     }
     
-    return 0;
+    
+    return compilation_failed;
 }
