@@ -20,7 +20,13 @@ enum TokenType {
     // Note(abiab): Operators
     TOKEN_EXCLAM,
     TOKEN_TILDE,
+    
     TOKEN_MINUS,
+    
+    TOKEN_PLUS,
+    TOKEN_STAR,
+    TOKEN_SLASH_FORWARD,
+    TOKEN_PERCENT,
 };
 
 typedef struct Token Token;
@@ -93,6 +99,26 @@ void PrintToken(Token token) {
         case (TOKEN_TILDE): {
             printf("TOKEN: TILDE (~) (%d)\n", token.type);
         } break;
+        
+        case (TOKEN_PLUS): {
+            printf("TOKEN: PLUS (+) (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_STAR): {
+            printf("TOKEN: STAR (*) (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_SLASH_FORWARD): {
+            printf("TOKEN: FORWARD SLASH (/) (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_PERCENT): {
+            printf("TOKEN: PERCETN (%%) (%d)\n", token.type);
+        } break;
+        
+        default: {
+            printf("[Error] token (%d) has not been added to print function\n", token.type);
+        }
     }
 }
 
@@ -289,6 +315,36 @@ Token PeekToken(char * string) {
                 
                 goto found_token;
             } break;
+            
+            case '+': {
+                token.type = TOKEN_PLUS;
+                
+                token.string = cursor;
+                token.string_length = 1;
+                
+                cursor += 1;
+                goto found_token;
+            } break;
+            
+            case '/': {
+                token.type = TOKEN_SLASH_FORWARD;
+                
+                token.string = cursor;
+                token.string_length = 1;
+                
+                cursor += 1;
+                goto found_token;
+            } break;
+            
+            case '%': {
+                token.type = TOKEN_PERCENT;
+                
+                token.string = cursor;
+                token.string_length = 1;
+                
+                cursor += 1;
+                goto found_token;
+            }
         }
     }
     
