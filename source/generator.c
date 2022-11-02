@@ -17,7 +17,7 @@ void GenerateExpression(FILE * file, AstNode * expression) {
         else if(expression->unary_operator_character == '!') {
             fprintf(file, "cmpq $0, %%rax\n");
             fprintf(file, "movq $0, %%rax\n");
-            fprintf(file, "setz %%al\n"
+            fprintf(file, "setz %%al\n");
         }
         else {
             printf("[ERROR] Unary operator found but invalid character given. This should not be seen by a user");
