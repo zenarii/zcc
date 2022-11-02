@@ -10,7 +10,7 @@
 
 int main() {
     // Note(abiab): Load the source file into a string. Currently hard coded
-    const char * path = "../test_programs/return_1.c";
+    const char * path = "../test_programs/negate.c";
     char * buffer;
     {
         FILE * file = fopen(path, "r");
@@ -37,17 +37,22 @@ int main() {
     Tokeniser tokeniser = {0};
     tokeniser.buffer = buffer;
     
-#if 0
-    Token = {0};
+#if 1
+    Token token = {0};
     
     do {
         token = GetNextTokenAndAdvance(&tokeniser);
         PrintToken(token);
     } while (token.type != TOKEN_INVALID);
+    
+    tokeniser.buffer = buffer;
 #endif
     
     AstNode * root = ParseProgram(&tokeniser);
-    //PrettyPrintAST(root, 0);
+    
+#if 1
+    PrettyPrintAST(root, 0);
+#endif
     
     const char * output_path = "assembly.s";
     FILE * file = fopen(output_path, "w");

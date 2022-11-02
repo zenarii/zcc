@@ -1,5 +1,30 @@
 #define OUTPUT_FILE 
 
+void GenerateExpression(FILE * file, AstNode * expression) {
+    if (expression->subtype == EXPRESSION_INT_LITERAL) {
+        fprintf(file, "movq $%d, %%rax\n", expression->int_literal_value);
+    }
+    else if(expression->subtype == EXPRESSION_UNARY_OPERATOR) {
+        GenerateExpression(file, expression->child);
+        
+        // Note(abi): Negation
+        if(expression->unary_operator_character == '-') {
+            fprintf(file, "neg %%rax\n");
+        }
+        else if(expression->unary_operator_character == '~') {
+            fprintf(file, "not %%rax\n");
+        }
+        else if(expression->unary_operator_character == '!') {
+            fprintf(file, "cmpq $0, %%rax\n");
+            fprintf(file, "movq $0, %%rax\n");
+            fprintf(file, "setz %%al\n"
+        }
+        else {
+            printf("[ERROR] Unary operator found but invalid character given. This should not be seen by a user");
+        }
+    }
+}
+
 void GenerateAsmFromAst(FILE * file, AstNode * node) {
     switch (node->type) {
         case AST_NODE_PROGRAM: {
@@ -13,16 +38,13 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
         } break;
         
         case AST_NODE_STATEMENT: {
-            // Note(abi): for a return statement
-            fprintf(file, "movl ");
+            // Note(abi): for a return statement MUST CHANGE THIS TOO
             GenerateAsmFromAst(file, node->child);
-            fprintf(file, ", %%eax\n");
             fprintf(file, "ret\n");
         } break;
         
         case AST_NODE_EXPRESSION: {
-            // Note(abi): prints an integer literal
-            fprintf(file, "$%d", node->int_literal_value);
+            GenerateExpression(file, node);
         } break;
     }
 }

@@ -1,2 +1,2 @@
 #!/bin/bash
-gcc source/main.c -o build/abcc
+gcc -g source/main.c -o build/abcc
