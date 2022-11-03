@@ -46,10 +46,43 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                     *(int *)0 = 0;
                 }
             }
-        }
+        } break;
         
         case AST_NODE_BINARY_OPERATOR: {
-            // TODO
+            GenerateAsmFromAst(file, node->left_child);
+            fprintf(file, "push %%rax\n");
+            
+            GenerateAsmFromAst(file, node->right_child);
+            fprintf(file, "pop %%rcx\n");
+            
+            // Note(abi): left child now stored in %rcx, right child stored in %rax
+            
+            switch (node->operator_type) {
+                case OPERATOR_PLUS: {
+                    fprintf(file, "addq %%rcx, %%rax\n"); 
+                } break;
+                
+                case OPERATOR_MULTIPLY: {
+                    fprintf(file, "imul %%rcx, %%rax\n");
+                } break;
+                
+                case OPERATOR_MINUS_BINARY: {
+                    // Note(abi): subq src, dst runs dst - src and stores in dst
+                    fprintf(file, "subq %%rax, %%rcx\n");
+                    fprintf(file, "movq %%rcx, %%rax\n");
+                } break;
+                
+                case OPERATOR_DIVIDE: {
+                    // Note(abi): idiv dst divides %rdx:%rax by dst
+                    // move left into rax, right into rcx
+                    fprintf(file, "push %%rax\n");
+                    fprintf(file, "movq %%rcx, %%rax\n");
+                    fprintf(file, "pop %%rcx\n");
+                    
+                    fprintf(file, "cqo\n");
+                    fprintf(file, "idiv %%rcx\n");
+                } break;
+            }
         } break;
         
         case AST_NODE_TERM: {

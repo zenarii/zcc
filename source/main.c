@@ -63,7 +63,7 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     fclose(file);
     
     char gcc_call[1024];
-    sprintf(gcc_call, "gcc %s -o %s", intermediate_assembly_path, output_path);
+    sprintf(gcc_call, "gcc -g %s -o %s", intermediate_assembly_path, output_path);
     
     system(gcc_call);
     //system("cat assembly.s");

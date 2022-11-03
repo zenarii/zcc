@@ -57,18 +57,16 @@ static int node_count;
 static int parse_failed;
 
 // TODO(abiab): may require different skupping of tokens etc depending on where the error is thrown.
-void ParserFail(Tokeniser * tokeniser, const char * error_message) {
+void ParserFail(Tokeniser * tokeniser, const char * error_message, TokenType skip_to) {
     parse_failed = 1;
     printf("[Error] %s:%d; %s\n", 
            tokeniser->file_name, tokeniser->line_number, error_message);
     
     // Note(abiab): advance the tokens to the next ; or } as to find further errors, as
     //              well as not to give incorrect errors
-    while(1) {
+    while(skip_to) {
         Token token = PeekToken(tokeniser->buffer);
-        if(token.type == TOKEN_SEMICOLON ||
-           token.type == TOKEN_BRACE_CLOSE || 
-           token.type == TOKEN_INVALID) {
+        if(token.type == skip_to || token.type == TOKEN_INVALID) {
             break;
         }
         GetNextTokenAndAdvance(tokeniser);
@@ -96,7 +94,9 @@ AstNode * ParseFactor(Tokeniser * tokeniser) {
         factor->child = ParseExpression(tokeniser);
         
         if(GetNextTokenAndAdvance(tokeniser).type != TOKEN_PARENTHESIS_CLOSE) {
-            ParserFail(tokeniser, "Expression in parantheses requires closing ')'");
+            ParserFail(tokeniser, 
+                       "Expression in parantheses requires closing ')'", 
+                       TOKEN_SEMICOLON);
         }
     }
     else if (IsUnaryOperator(PeekToken(tokeniser->buffer).type)) {
@@ -109,7 +109,11 @@ AstNode * ParseFactor(Tokeniser * tokeniser) {
             case TOKEN_MINUS: unary_operator->operator_type = OPERATOR_MINUS_UNARY; break;
             case TOKEN_EXCLAM: unary_operator->operator_type = OPERATOR_NEGATE; break;
             case TOKEN_TILDE: unary_operator->operator_type = OPERATOR_BITWISE_COMP; break;
-            default: ParserFail(tokeniser, "Invalid unary operator"); return 0; break;
+            default: { 
+                ParserFail(tokeniser, "Invalid unary operator", TOKEN_SEMICOLON); 
+                return 0;
+                break;
+            }
         }
         
         unary_operator->child = ParseFactor(tokeniser);
@@ -120,7 +124,7 @@ AstNode * ParseFactor(Tokeniser * tokeniser) {
         factor->int_literal_value = int_literal.value;
     }
     else {
-        ParserFail(tokeniser, "Invalid factor");
+        ParserFail(tokeniser, "Expected integer literal", TOKEN_SEMICOLON);
         return 0;
     }
     
@@ -196,7 +200,7 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     statement->type = AST_NODE_STATEMENT;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_KEYWORD_RETURN) {
-        ParserFail(tokeniser, "Expected keyword 'return' at start of statement");
+        ParserFail(tokeniser, "Expected keyword 'return' at start of statement", 0);
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
@@ -206,7 +210,7 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     // Note(abi): until just ; considered a valid statement, occasionally hitting this error
     //            error will erroneuously throw an 'expected }' error; (i believe)
     if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-        ParserFail(tokeniser, "Expected ';'");
+        ParserFail(tokeniser, "Expected ';'", 0);
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
@@ -219,14 +223,14 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     function->type = AST_NODE_FUNCTION;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_KEYWORD_INT) {
-        ParserFail(tokeniser, "Expected keyword int");
+        ParserFail(tokeniser, "Expected keyword int", 0);
         return 0;
     }
     
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_IDENTIFIER) {
-        ParserFail(tokeniser, "Expected identifier");
+        ParserFail(tokeniser, "Expected identifier", 0);
         return 0;
     }
     
@@ -235,19 +239,19 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     function->function_name_length = identifier.string_length;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_OPEN) {
-        ParserFail(tokeniser, "Expected (");
+        ParserFail(tokeniser, "Expected (", 0);
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_CLOSE) {
-        ParserFail(tokeniser, "Expected )");
+        ParserFail(tokeniser, "Expected )", 0);
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_BRACE_OPEN) {
-        ParserFail(tokeniser, "Expected {");
+        ParserFail(tokeniser, "Expected {", 0);
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
@@ -255,7 +259,7 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     function->child = ParseStatement(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_BRACE_CLOSE) {
-        ParserFail(tokeniser, "Expected }");
+        ParserFail(tokeniser, "Expected }", 0);
         return 0;
     }
     

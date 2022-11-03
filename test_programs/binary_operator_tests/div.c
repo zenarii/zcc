@@ -1,3 +1,3 @@
 int main() {
-    return 83/2;
+    return 82/2;
 }
