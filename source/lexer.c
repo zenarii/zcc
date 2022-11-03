@@ -344,7 +344,16 @@ Token PeekToken(char * string) {
                 
                 cursor += 1;
                 goto found_token;
-            }
+            } break;
+            
+            case '*': {
+                token.type = TOKEN_STAR;
+                
+                token.string = cursor;
+                token.string_length = 1;
+                
+                goto found_token;
+            } break;
         }
     }
     
