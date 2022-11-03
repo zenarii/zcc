@@ -1,30 +1,5 @@
 #define OUTPUT_FILE 
 
-void GenerateExpression(FILE * file, AstNode * expression) {
-    if (expression->subtype == EXPRESSION_INT_LITERAL) {
-        fprintf(file, "movq $%d, %%rax\n", expression->int_literal_value);
-    }
-    else if(expression->subtype == EXPRESSION_UNARY_OPERATOR) {
-        GenerateExpression(file, expression->child);
-        
-        // Note(abi): Negation
-        if(expression->unary_operator_character == '-') {
-            fprintf(file, "neg %%rax\n");
-        }
-        else if(expression->unary_operator_character == '~') {
-            fprintf(file, "not %%rax\n");
-        }
-        else if(expression->unary_operator_character == '!') {
-            fprintf(file, "cmpq $0, %%rax\n");
-            fprintf(file, "movq $0, %%rax\n");
-            fprintf(file, "setz %%al\n");
-        }
-        else {
-            printf("[ERROR] Unary operator found but invalid character given. This should not be seen by a user");
-        }
-    }
-}
-
 void GenerateAsmFromAst(FILE * file, AstNode * node) {
     switch (node->type) {
         case AST_NODE_PROGRAM: {
@@ -44,7 +19,50 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
         } break;
         
         case AST_NODE_EXPRESSION: {
-            GenerateExpression(file, node);
+            GenerateAsmFromAst(file, node->child);
+        } break;
+        
+        case AST_NODE_UNARY_OPERATOR: {
+            // Put inside into %rax
+            GenerateAsmFromAst(file, node->child);
+            
+            switch (node->operator_type) {
+                case OPERATOR_NEGATE: {
+                    fprintf(file, "cmpq $0, %%rax\n");
+                    fprintf(file, "movq $0, %%rax\n");
+                    fprintf(file, "setz %%al\n");
+                } break;
+                
+                case OPERATOR_MINUS_UNARY: {
+                    fprintf(file, "neg %%rax\n");
+                } break;
+                
+                case OPERATOR_BITWISE_COMP: {
+                    fprintf(file, "not %%rax\n");
+                } break;
+                
+                default: {
+                    printf("[Error] invalid unary operator in code generation");
+                    *(int *)0 = 0;
+                }
+            }
+        }
+        
+        case AST_NODE_BINARY_OPERATOR: {
+            // TODO
+        } break;
+        
+        case AST_NODE_TERM: {
+            GenerateAsmFromAst(file, node->child);
+        } break;
+        
+        case AST_NODE_FACTOR: {
+            if(node->child) {
+                // Note(abi): child is either an expression or a unary operator
+                GenerateAsmFromAst(file, node->child);
+            } else {
+                fprintf(file, "movq $%d, %%rax\n", node->int_literal_value); 
+            }
         } break;
     }
 }
