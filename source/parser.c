@@ -116,6 +116,14 @@ int IsBinaryOperator(TokenType type) {
             (type == TOKEN_PLUS));
 }
 
+OperatorType UnaryOperatorType(TokenType token_type) {
+    switch (token_type) {
+        case TOKEN_MINUS:  return OPERATOR_MINUS_UNARY;
+        case TOKEN_EXCLAM: return OPERATOR_NEGATE;
+        case TOKEN_TILDE:  return OPERATOR_BITWISE_COMP;
+    }
+}
+
 OperatorType BinaryOperatorType(TokenType token_type) {
     switch (token_type) {
         case TOKEN_STAR:          return OPERATOR_MULTIPLY;
@@ -130,7 +138,7 @@ OperatorType BinaryOperatorType(TokenType token_type) {
 //
 
 AstNode * ParseExpression(Tokeniser * tokeniser, int min_precedence);
-void PrettyPrintAST(AstNode * node, int depth);
+
 AstNode * ParseAtom(Tokeniser * tokeniser) {
     AstNode * atom;
     
@@ -138,14 +146,19 @@ AstNode * ParseAtom(Tokeniser * tokeniser) {
         GetNextTokenAndAdvance(tokeniser);
         atom = ParseExpression(tokeniser, 0);
         
-        printf("found expression in parentheses! Printing\n");
-        PrettyPrintAST(atom->child, 0);
-        
         if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_CLOSE) {
             ParserFail(tokeniser, "Missing ')' in expression", TOKEN_SEMICOLON);
             return 0;
         }
         GetNextTokenAndAdvance(tokeniser);
+    }
+    else if(IsUnaryOperator(PeekToken(tokeniser->buffer).type)) {
+        Token unary_operator = GetNextTokenAndAdvance(tokeniser);
+        
+        atom = &nodes[node_count++];
+        atom->type = AST_NODE_UNARY_OPERATOR;
+        atom->operator_type = UnaryOperatorType(unary_operator.type);
+        atom->child = ParseAtom(tokeniser);
     }
     else if(PeekToken(tokeniser->buffer).type == TOKEN_LITERAL_INT) {
         Token number = GetNextTokenAndAdvance(tokeniser);
@@ -153,6 +166,10 @@ AstNode * ParseAtom(Tokeniser * tokeniser) {
         atom = &nodes[node_count++];
         atom->type = AST_NODE_ATOM;
         atom->int_literal_value = number.value;
+    }
+    else {
+        ParserFail(tokeniser, "Expected int to end expression", TOKEN_SEMICOLON);
+        return 0;
     }
     
     return atom;
@@ -363,6 +380,7 @@ void PrettyPrintAST(AstNode * node, int depth) {
             // factor either "(" <expression> ")" or <unary_operator> <factor>
             if(node->child) {
                 PrettyPrintAST(node->child, depth);
+                printf("hi");
             }
             else {
                 printf("INT<%d>", node->int_literal_value);
