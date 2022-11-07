@@ -168,7 +168,11 @@ AstNode * ParseAtom(Tokeniser * tokeniser) {
         atom->int_literal_value = number.value;
     }
     else {
-        ParserFail(tokeniser, "Expected int to end expression", TOKEN_SEMICOLON);
+        Token next = PeekToken(tokeniser->buffer);
+        if(IsBinaryOperator(next.type)) 
+            ParserFail(tokeniser, "Expected int before binary operator", TOKEN_SEMICOLON);
+        else
+            ParserFail(tokeniser, "Expected int to end expression", TOKEN_SEMICOLON);
         return 0;
     }
     
@@ -227,6 +231,8 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     //            error will erroneuously throw an 'expected }' error; (i believe)
     if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
         ParserFail(tokeniser, "Expected ';'", 0);
+        
+        
         return 0;
     }
     GetNextTokenAndAdvance(tokeniser);
