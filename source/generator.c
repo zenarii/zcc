@@ -85,11 +85,7 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
             }
         } break;
         
-        case AST_NODE_TERM: {
-            GenerateAsmFromAst(file, node->child);
-        } break;
-        
-        case AST_NODE_FACTOR: {
+        case AST_NODE_ATOM: {
             if(node->child) {
                 // Note(abi): child is either an expression or a unary operator
                 GenerateAsmFromAst(file, node->child);
