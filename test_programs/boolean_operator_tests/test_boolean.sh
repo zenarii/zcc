@@ -28,7 +28,6 @@ function test_invalid() {
 
 
 echo "[Info] testing valid code"
-test_program associativity.c 2
 test_program and_one.c 1
 test_program and_zero.c 0
 test_program eq_false.c 0
@@ -36,15 +35,21 @@ test_program eq_true.c 1
 test_program eq_false.c 0
 test_program ge_equal.c 1
 test_program ge_true.c 1
-test_program ge_false.c
+test_program ge_false.c 0
 test_program leq_equal.c 1
 test_program leq_true.c 1
 test_program leq_false.c 0
 test_program neq_true.c 1
 test_program neq_false.c 0
 test_program or_one.c 1
-test_program or_zero.c 0
+test_program or_zero.c 1
+test_program precedence_1.c 1
+test_program precedence_2.c 0
+test_program precedence_3.c 0
+test_program precedence_4.c 1
 
 echo
 
 echo "[Info] testing invalid code"
+
+echo -e "${RED}[TODO]: test short circuiting with variables once added${CLEAR}"

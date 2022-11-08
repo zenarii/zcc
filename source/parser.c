@@ -232,7 +232,7 @@ AstNode * ParseExpression(Tokeniser * tokeniser, int min_precedence) {
         Token token = GetNextTokenAndAdvance(tokeniser);
         Parselet parselet = ParseletLookUp(token.type);
         OperatorType operator_type = BinaryOperatorType(token_type);
-        if(operator_type == OPERATOR_OR) printf("or");
+        
         int next_min_precedence = parselet.precedence;
         if(parselet.associativty == ASSOCIATE_LEFT)
             next_min_precedence += 1;
