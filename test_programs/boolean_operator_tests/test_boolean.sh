@@ -51,5 +51,9 @@ test_program precedence_4.c 1
 echo
 
 echo "[Info] testing invalid code"
+test_invalid invalid-missing_semicolon.c
+test_invalid invalid-missing_second_operator.c
+test_invalid invalid-missing_first_operator.c
+test_invalid invalid-missing_middle_operator.c
 
 echo -e "${RED}[TODO]: test short circuiting with variables once added${CLEAR}"
