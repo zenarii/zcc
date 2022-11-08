@@ -27,6 +27,15 @@ enum TokenType {
     TOKEN_STAR,
     TOKEN_SLASH_FORWARD,
     TOKEN_PERCENT,
+    
+    TOKEN_EQUALS,
+    TOKEN_NOT_EQUAL,
+    TOKEN_AND,
+    TOKEN_OR,
+    TOKEN_LESS_THAN,
+    TOKEN_LESS_OR_EQUAL,
+    TOKEN_GREATER_THAN,
+    TOKEN_GREATER_OR_EQUAL,
 };
 
 typedef struct Token Token;
@@ -81,39 +90,71 @@ void PrintToken(Token token) {
         } break;
         
         case (TOKEN_LITERAL_INT): {
-            printf("TOKEN: LITERAL: INT (%d) \n", token.value);
+            printf("TOKEN: LITERAL: INT <%d> (%d)\n", token.value, token.type);
         } break;
         
         case (TOKEN_IDENTIFIER): {
-            printf("TOKEN: IDENTIFIER (%.*s)\n", token.string_length, token.string);
+            printf("TOKEN: IDENTIFIER <%.*s> (%d)\n", token.string_length, token.string, token.type);
         } break;
         
         case (TOKEN_EXCLAM): {
-            printf("TOKEN: EXCALMATION (!) (%d)\n", token.type);
+            printf("TOKEN: '!' (%d)\n", token.type);
         } break;
         
         case (TOKEN_MINUS): {
-            printf("TOKEN: MINUS (-) (%d)\n", token.type);
+            printf("TOKEN: '-' (%d)\n", token.type);
         } break;
         
         case (TOKEN_TILDE): {
-            printf("TOKEN: TILDE (~) (%d)\n", token.type);
+            printf("TOKEN: '~' (%d)\n", token.type);
         } break;
         
         case (TOKEN_PLUS): {
-            printf("TOKEN: PLUS (+) (%d)\n", token.type);
+            printf("TOKEN: '+' (%d)\n", token.type);
         } break;
         
         case (TOKEN_STAR): {
-            printf("TOKEN: STAR (*) (%d)\n", token.type);
+            printf("TOKEN: '*' (%d)\n", token.type);
         } break;
         
         case (TOKEN_SLASH_FORWARD): {
-            printf("TOKEN: FORWARD SLASH (/) (%d)\n", token.type);
+            printf("TOKEN: '/' (%d)\n", token.type);
         } break;
         
         case (TOKEN_PERCENT): {
-            printf("TOKEN: PERCETN (%%) (%d)\n", token.type);
+            printf("TOKEN: '%%' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_EQUALS): {
+            printf("TOKEN: '==' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_NOT_EQUAL): {
+            printf("TOKEN: '!=' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_AND): {
+            printf("TOKEN: '&&' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_OR): {
+            printf("TOKEN: '||' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_LESS_THAN): {
+            printf("TOKEN: '<' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_LESS_OR_EQUAL): {
+            printf("TOKEN: '<=' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_GREATER_THAN): {
+            printf("TOKEN: '>' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_GREATER_OR_EQUAL): {
+            printf("TOKEN: '>=' (%d)\n", token.type);
         } break;
         
         default: {
@@ -297,11 +338,16 @@ Token PeekToken(char * string) {
             
             
             case '!': {
-                token.type = TOKEN_EXCLAM;
-                token.string = cursor;
-                token.string_length = 1;
-                
-                cursor += 1;
+                if(*(cursor+1) == '=') {
+                    token.type = TOKEN_NOT_EQUAL;
+                    token.string = cursor;
+                    token.string_length = 2;
+                }
+                else {
+                    token.type = TOKEN_EXCLAM;
+                    token.string = cursor;
+                    token.string_length = 1;
+                }
                 
                 goto found_token;
             } break;
@@ -354,12 +400,69 @@ Token PeekToken(char * string) {
                 
                 goto found_token;
             } break;
+            
+            case '=': {
+                if(*(cursor+1) == '=') {
+                    token.type = TOKEN_EQUALS;
+                    token.string = cursor;
+                    token.string_length = 2;
+                }
+                
+                goto found_token;
+            } break;
+            
+            case '&': {
+                if(*(cursor+1) == '&') {
+                    token.type = TOKEN_AND;
+                    token.string = cursor;
+                    token.string_length = 2;
+                }
+                
+                goto found_token;
+            } break;
+            
+            case '|': {
+                if(*(cursor+1) == '|') {
+                    token.type = TOKEN_OR;
+                    token.string = cursor;
+                    token.string_length = 2;
+                }
+                
+                goto found_token;
+            } break;
+            
+            case '<': {
+                if(*(cursor+1) == '=') {
+                    token.type = TOKEN_LESS_OR_EQUAL;
+                    token.string = cursor;
+                    token.string_length = 2;
+                } else {
+                    token.type = TOKEN_LESS_THAN;
+                    token.string = cursor;
+                    token.string_length = 1;
+                }
+                
+                goto found_token;
+            } break;
+            
+            case '>': {
+                if(*(cursor+1) == '=') {
+                    token.type = TOKEN_GREATER_OR_EQUAL;
+                    token.string = cursor;
+                    token.string_length = 2;
+                } else {
+                    token.type = TOKEN_GREATER_THAN;
+                    token.string = cursor;
+                    token.string_length = 1;
+                }
+                
+                goto found_token;
+            } break;
         }
     }
     
     
     found_token:;
-    //PrintToken(token);
     
     return token;
 }

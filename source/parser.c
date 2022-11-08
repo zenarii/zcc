@@ -13,18 +13,34 @@ struct Parselet {
 };
 
 static Parselet parselets[] = {
-    {TOKEN_PLUS,          5, ASSOCIATE_LEFT},
-    {TOKEN_MINUS,         5, ASSOCIATE_LEFT},
-    {TOKEN_STAR,          7, ASSOCIATE_LEFT},
-    {TOKEN_SLASH_FORWARD, 7, ASSOCIATE_LEFT},
+    {TOKEN_PLUS,              9, ASSOCIATE_LEFT},
+    {TOKEN_MINUS,             9, ASSOCIATE_LEFT},
+    {TOKEN_STAR,             11, ASSOCIATE_LEFT},
+    {TOKEN_SLASH_FORWARD,    11, ASSOCIATE_LEFT},
+    {TOKEN_OR,                1, ASSOCIATE_LEFT},
+    {TOKEN_AND,               3, ASSOCIATE_LEFT},
+    {TOKEN_EQUALS,            5, ASSOCIATE_LEFT},
+    {TOKEN_NOT_EQUAL,         5, ASSOCIATE_LEFT},
+    {TOKEN_LESS_THAN,         7, ASSOCIATE_LEFT},
+    {TOKEN_LESS_OR_EQUAL,     7, ASSOCIATE_LEFT},
+    {TOKEN_GREATER_THAN,      7, ASSOCIATE_LEFT},
+    {TOKEN_GREATER_OR_EQUAL,  7, ASSOCIATE_LEFT},
 };
 
 Parselet ParseletLookUp(TokenType type) {
     switch (type) {
-        case TOKEN_PLUS:          return parselets[0];
-        case TOKEN_MINUS:         return parselets[1];
-        case TOKEN_STAR:          return parselets[2];
-        case TOKEN_SLASH_FORWARD: return parselets[3];
+        case TOKEN_PLUS:             return parselets[0];
+        case TOKEN_MINUS:            return parselets[1];
+        case TOKEN_STAR:             return parselets[2];
+        case TOKEN_SLASH_FORWARD:    return parselets[3];
+        case TOKEN_OR:               return parselets[4];
+        case TOKEN_AND:              return parselets[5];
+        case TOKEN_EQUALS:           return parselets[6];
+        case TOKEN_NOT_EQUAL:        return parselets[7];
+        case TOKEN_LESS_THAN:        return parselets[8];
+        case TOKEN_LESS_OR_EQUAL:    return parselets[9];
+        case TOKEN_GREATER_THAN:     return parselets[10];
+        case TOKEN_GREATER_OR_EQUAL: return parselets[11];
     }
 }
 
@@ -58,6 +74,15 @@ enum OperatorType {
     OPERATOR_MINUS_UNARY,
     OPERATOR_NEGATE,
     OPERATOR_BITWISE_COMP,
+    
+    OPERATOR_EQUALS,
+    OPERATOR_NOT_EQUAL,
+    OPERATOR_AND,
+    OPERATOR_OR,
+    OPERATOR_LESS_THAN,
+    OPERATOR_LESS_OR_EQUAL,
+    OPERATOR_GREATER_THAN,
+    OPERATOR_GREATER_OR_EQUAL,
 };
 
 typedef struct AstNode AstNode;
@@ -113,7 +138,15 @@ int IsBinaryOperator(TokenType type) {
     return ((type == TOKEN_STAR) ||
             (type == TOKEN_SLASH_FORWARD)||
             (type == TOKEN_MINUS) ||
-            (type == TOKEN_PLUS));
+            (type == TOKEN_PLUS) ||
+            (type == TOKEN_AND) ||
+            (type == TOKEN_OR) ||
+            (type == TOKEN_EQUALS) ||
+            (type == TOKEN_NOT_EQUAL) ||
+            (type == TOKEN_GREATER_THAN) ||
+            (type == TOKEN_GREATER_OR_EQUAL) ||
+            (type == TOKEN_LESS_THAN) ||
+            (type == TOKEN_LESS_OR_EQUAL));
 }
 
 OperatorType UnaryOperatorType(TokenType token_type) {
@@ -126,10 +159,18 @@ OperatorType UnaryOperatorType(TokenType token_type) {
 
 OperatorType BinaryOperatorType(TokenType token_type) {
     switch (token_type) {
-        case TOKEN_STAR:          return OPERATOR_MULTIPLY;
-        case TOKEN_PLUS:          return OPERATOR_PLUS;
-        case TOKEN_MINUS:         return OPERATOR_MINUS_BINARY;
-        case TOKEN_SLASH_FORWARD: return OPERATOR_DIVIDE;
+        case TOKEN_STAR:             return OPERATOR_MULTIPLY;
+        case TOKEN_PLUS:             return OPERATOR_PLUS;
+        case TOKEN_MINUS:            return OPERATOR_MINUS_BINARY;
+        case TOKEN_SLASH_FORWARD:    return OPERATOR_DIVIDE;
+        case TOKEN_EQUALS:           return OPERATOR_EQUALS;
+        case TOKEN_NOT_EQUAL:        return OPERATOR_NOT_EQUAL;
+        case TOKEN_OR:               return OPERATOR_OR;
+        case TOKEN_AND:              return OPERATOR_AND;
+        case TOKEN_LESS_THAN:        return OPERATOR_LESS_THAN;
+        case TOKEN_LESS_OR_EQUAL:    return OPERATOR_LESS_OR_EQUAL;
+        case TOKEN_GREATER_THAN:     return OPERATOR_GREATER_THAN;
+        case TOKEN_GREATER_OR_EQUAL: return OPERATOR_GREATER_OR_EQUAL;
     }
 }
 
@@ -191,7 +232,7 @@ AstNode * ParseExpression(Tokeniser * tokeniser, int min_precedence) {
         Token token = GetNextTokenAndAdvance(tokeniser);
         Parselet parselet = ParseletLookUp(token.type);
         OperatorType operator_type = BinaryOperatorType(token_type);
-        
+        if(operator_type == OPERATOR_OR) printf("or");
         int next_min_precedence = parselet.precedence;
         if(parselet.associativty == ASSOCIATE_LEFT)
             next_min_precedence += 1;
@@ -225,12 +266,12 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     }
     GetNextTokenAndAdvance(tokeniser);
     
-    statement->child = ParseExpression(tokeniser, 1);
+    statement->child = ParseExpression(tokeniser, 0);
     
     // Note(abi): until just ; considered a valid statement, occasionally hitting this error
     //            error will erroneuously throw an 'expected }' error; (i believe)
     if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-        ParserFail(tokeniser, "Expected ';'", 0);
+        ParserFail(tokeniser, "Expected ';'", TOKEN_BRACE_CLOSE);
         
         
         return 0;
@@ -356,25 +397,20 @@ void PrettyPrintAST(AstNode * node, int depth) {
         
         case AST_NODE_BINARY_OPERATOR: {
             switch (node->operator_type) {
-                case OPERATOR_PLUS: {
-                    printf("ADD(");
-                } break;
+                case OPERATOR_PLUS: printf("ADD("); break;
+                case OPERATOR_MULTIPLY: printf("MULT("); break;
+                case OPERATOR_MINUS_BINARY: printf("SUB("); break;
+                case OPERATOR_DIVIDE: printf("DIV("); break;
+                case OPERATOR_MODULO: printf("MOD("); break;
                 
-                case OPERATOR_MULTIPLY: {
-                    printf("MULT(");
-                } break;
-                
-                case OPERATOR_MINUS_BINARY: {
-                    printf("SUB(");
-                } break;
-                
-                case OPERATOR_DIVIDE: {
-                    printf("DIV(");
-                } break;
-                
-                case OPERATOR_MODULO: {
-                    printf("MOD(");
-                } break;
+                case OPERATOR_EQUALS: printf("EQ("); break;
+                case OPERATOR_NOT_EQUAL: printf("NEQ("); break;
+                case OPERATOR_AND: printf("AND("); break;
+                case OPERATOR_OR: printf("OR("); break;
+                case OPERATOR_LESS_THAN: printf("LT("); break;
+                case OPERATOR_LESS_OR_EQUAL: printf("LEQ("); break;
+                case OPERATOR_GREATER_THAN: printf("GT("); break;
+                case OPERATOR_GREATER_OR_EQUAL: printf("GEQ("); break;
             }
             PrettyPrintAST(node->left_child, depth);
             printf(", ");

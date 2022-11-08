@@ -52,11 +52,11 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     AstNode * root = ParseProgram(&tokeniser);
     if(parse_failed) return 1;
     
-#if 0
+#if 1
     PrettyPrintAST(root, 0);
 #endif
     
-    
+#if 0
     const char * intermediate_assembly_path = "assembly.s";
     FILE * file = fopen(intermediate_assembly_path, "w");
     GenerateAsmFromAst(file, root);
@@ -70,7 +70,7 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     if(delete_asm) {
         system("rm assembly.s");
     }
-    
+#endif
     return 0;
 }
 
