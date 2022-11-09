@@ -140,15 +140,22 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
         } break;
         
         case AST_NODE_FUNCTION: {
-            fprintf(file, ".globl %.*s\n", node->function_name_length, node->function_name);
-            fprintf(file, "%.*s:\n", node->function_name_length, node->function_name);
+            fprintf(file, ".globl %.*s\n", node->identifier_length, node->identifier);
+            fprintf(file, "%.*s:\n", node->identifier_length, node->identifier);
             GenerateAsmFromAst(file, node->child);
         } break;
         
         case AST_NODE_STATEMENT: {
-            // Note(abi): for a return statement MUST CHANGE THIS TOO
-            GenerateAsmFromAst(file, node->child);
-            fprintf(file, "ret\n");
+            switch (node->statement_type) {
+                case STATEMENT_RETURN: {
+                    GenerateAsmFromAst(file, node->right_child);
+                    fprintf(file, "ret\n");
+                } break;
+                
+                case STATEMENT_DECLARATION: {
+                    
+                } break;
+            }
         } break;
         
         case AST_NODE_EXPRESSION: {

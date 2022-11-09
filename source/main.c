@@ -47,12 +47,13 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     } while (token.type != TOKEN_INVALID);
     
     tokeniser.buffer = buffer;
+    tokeniser.line_number = 1;
 #endif
     
     AstNode * root = ParseProgram(&tokeniser);
     if(parse_failed) return 1;
     
-#if 0
+#if 1
     PrettyPrintAST(root, 0);
 #endif
     
@@ -60,7 +61,7 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     //            when no print statement placed. This fix is hopefully temporary.
     printf(" \n");
     
-#if 1
+#if 0
     const char * intermediate_assembly_path = "assembly.s";
     FILE * file = fopen(intermediate_assembly_path, "w");
     GenerateAsmFromAst(file, root);

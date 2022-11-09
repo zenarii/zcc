@@ -1,7 +1,10 @@
+// NOTE(Abi): Important todo; some kind of memory management or vector type for ast node lists
+
 typedef enum Associativity Associativity;
 enum Associativity {
     ASSOCIATE_INVALID,
     
+    ASSOCIATE_RIGHT,
     ASSOCIATE_LEFT,
 };
 
@@ -13,18 +16,19 @@ struct Parselet {
 };
 
 static Parselet parselets[] = {
-    {TOKEN_PLUS,              9, ASSOCIATE_LEFT},
-    {TOKEN_MINUS,             9, ASSOCIATE_LEFT},
-    {TOKEN_STAR,             11, ASSOCIATE_LEFT},
-    {TOKEN_SLASH_FORWARD,    11, ASSOCIATE_LEFT},
-    {TOKEN_OR,                1, ASSOCIATE_LEFT},
-    {TOKEN_AND,               3, ASSOCIATE_LEFT},
-    {TOKEN_EQUALS,            5, ASSOCIATE_LEFT},
-    {TOKEN_NOT_EQUAL,         5, ASSOCIATE_LEFT},
-    {TOKEN_LESS_THAN,         7, ASSOCIATE_LEFT},
-    {TOKEN_LESS_OR_EQUAL,     7, ASSOCIATE_LEFT},
-    {TOKEN_GREATER_THAN,      7, ASSOCIATE_LEFT},
-    {TOKEN_GREATER_OR_EQUAL,  7, ASSOCIATE_LEFT},
+    {TOKEN_PLUS,             11, ASSOCIATE_LEFT},
+    {TOKEN_MINUS,            11, ASSOCIATE_LEFT},
+    {TOKEN_STAR,             13, ASSOCIATE_LEFT},
+    {TOKEN_SLASH_FORWARD,    13, ASSOCIATE_LEFT},
+    {TOKEN_OR,                3, ASSOCIATE_LEFT},
+    {TOKEN_AND,               5, ASSOCIATE_LEFT},
+    {TOKEN_EQUALS,            7, ASSOCIATE_LEFT},
+    {TOKEN_NOT_EQUAL,         7, ASSOCIATE_LEFT},
+    {TOKEN_LESS_THAN,         9, ASSOCIATE_LEFT},
+    {TOKEN_LESS_OR_EQUAL,     9, ASSOCIATE_LEFT},
+    {TOKEN_GREATER_THAN,      9, ASSOCIATE_LEFT},
+    {TOKEN_GREATER_OR_EQUAL,  9, ASSOCIATE_LEFT},
+    {TOKEN_ASSIGN,            1, ASSOCIATE_RIGHT},
 };
 
 Parselet ParseletLookUp(TokenType type) {
@@ -59,6 +63,7 @@ enum AstNodeType {
     AST_NODE_BINARY_OPERATOR,
     AST_NODE_UNARY_OPERATOR,
     AST_NODE_ATOM,
+    AST_NODE_VARIABLE,
 };
 
 typedef enum OperatorType OperatorType;
@@ -83,6 +88,17 @@ enum OperatorType {
     OPERATOR_LESS_OR_EQUAL,
     OPERATOR_GREATER_THAN,
     OPERATOR_GREATER_OR_EQUAL,
+    
+    OPERATOR_ASSIGN,
+};
+
+typedef enum StatementType StatementType;
+enum StatementType {
+    STATEMENT_INVALID,
+    
+    STATEMENT_RETURN,
+    STATEMENT_EXPRESSION,
+    STATEMENT_DECLARATION,
 };
 
 typedef struct AstNode AstNode;
@@ -97,15 +113,16 @@ struct AstNode {
     AstNode * right_child;
     
     // for function declaration
-    char * function_name;
-    int function_name_length;
+    char * identifier;
+    int identifier_length;
     
     // for integer literal
     int int_literal_value;
     
     // for unary operator
-    char unary_operator_character; // TODO(abi): convert to operator type usage
     OperatorType operator_type;
+    
+    StatementType statement_type;
 };
 
 
@@ -146,7 +163,8 @@ int IsBinaryOperator(TokenType type) {
             (type == TOKEN_GREATER_THAN) ||
             (type == TOKEN_GREATER_OR_EQUAL) ||
             (type == TOKEN_LESS_THAN) ||
-            (type == TOKEN_LESS_OR_EQUAL));
+            (type == TOKEN_LESS_OR_EQUAL) ||
+            (type == TOKEN_ASSIGN));
 }
 
 OperatorType UnaryOperatorType(TokenType token_type) {
@@ -171,6 +189,7 @@ OperatorType BinaryOperatorType(TokenType token_type) {
         case TOKEN_LESS_OR_EQUAL:    return OPERATOR_LESS_OR_EQUAL;
         case TOKEN_GREATER_THAN:     return OPERATOR_GREATER_THAN;
         case TOKEN_GREATER_OR_EQUAL: return OPERATOR_GREATER_OR_EQUAL;
+        case TOKEN_ASSIGN:           return OPERATOR_ASSIGN;
     }
 }
 
@@ -208,6 +227,14 @@ AstNode * ParseAtom(Tokeniser * tokeniser) {
         atom->type = AST_NODE_ATOM;
         atom->int_literal_value = number.value;
     }
+    else if(PeekToken(tokeniser->buffer).type == TOKEN_IDENTIFIER) {
+        Token identifier = GetNextTokenAndAdvance(tokeniser);
+        
+        atom = &nodes[node_count++];
+        atom->type = AST_NODE_VARIABLE;
+        atom->identifier = identifier.string;
+        atom->identifier_length = identifier.string_length;
+    }
     else {
         Token next = PeekToken(tokeniser->buffer);
         if(IsBinaryOperator(next.type)) 
@@ -227,6 +254,10 @@ AstNode * ParseExpression(Tokeniser * tokeniser, int min_precedence) {
     AstNode * left_hand_side = ParseAtom(tokeniser);
     
     TokenType token_type = PeekToken(tokeniser->buffer).type;
+    
+    if(token_type == TOKEN_ASSIGN && left_hand_side->type != AST_NODE_VARIABLE) {
+        ParserFail(tokeniser, "Cannot assign value to non variable left hand side", 0);
+    }
     
     while(IsBinaryOperator(token_type) && ParseletLookUp(token_type).precedence > min_precedence) {
         Token token = GetNextTokenAndAdvance(tokeniser);
@@ -260,23 +291,52 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     AstNode * statement = &nodes[node_count++];
     statement->type = AST_NODE_STATEMENT;
     
-    if(PeekToken(tokeniser->buffer).type != TOKEN_KEYWORD_RETURN) {
-        ParserFail(tokeniser, "Expected keyword 'return' at start of statement", 0);
-        return 0;
-    }
-    GetNextTokenAndAdvance(tokeniser);
-    
-    statement->child = ParseExpression(tokeniser, 0);
-    
-    // Note(abi): until just ; considered a valid statement, occasionally hitting this error
-    //            error will erroneuously throw an 'expected }' error; (i believe)
-    if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-        ParserFail(tokeniser, "Expected ';'", TOKEN_BRACE_CLOSE);
+    if(PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_RETURN) {
+        GetNextTokenAndAdvance(tokeniser);
+        statement->statement_type = STATEMENT_RETURN;
+        statement->right_child = ParseExpression(tokeniser, 0);
         
-        
-        return 0;
+        if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+            ParserFail(tokeniser, "Expected ';' at end of return statement", TOKEN_BRACE_CLOSE);
+            return 0;
+        }
+        GetNextTokenAndAdvance(tokeniser);
     }
-    GetNextTokenAndAdvance(tokeniser);
+    else if(PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_INT) {
+        // Note(abi): declaration
+        GetNextTokenAndAdvance(tokeniser);
+        statement->statement_type = STATEMENT_DECLARATION;
+        
+        if(PeekToken(tokeniser->buffer).type != TOKEN_IDENTIFIER) {
+            ParserFail(tokeniser, "Tried to declare variable with no identifier", TOKEN_SEMICOLON);
+            return 0;
+        }
+        
+        Token identifier = GetNextTokenAndAdvance(tokeniser);
+        statement->identifier = identifier.string;
+        statement->identifier_length = identifier.string_length;
+        
+        if(PeekToken(tokeniser->buffer).type == TOKEN_ASSIGN) {
+            GetNextTokenAndAdvance(tokeniser);
+            statement->right_child = ParseExpression(tokeniser, 0);
+        }
+        
+        if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+            ParserFail(tokeniser, "Expected ';' at end of declaration", TOKEN_SEMICOLON);
+            return 0;
+        }
+        GetNextTokenAndAdvance(tokeniser);
+    }
+    else {
+        // Note(abi): expression
+        statement->statement_type = STATEMENT_EXPRESSION;
+        statement->right_child = ParseExpression(tokeniser, 0);
+        if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+            ParserFail(tokeniser, "Expected ';' at end of expression", TOKEN_BRACE_CLOSE);
+            return 0;
+        }
+        GetNextTokenAndAdvance(tokeniser);
+    }
     
     return statement;
 };
@@ -298,8 +358,8 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     }
     
     Token identifier = GetNextTokenAndAdvance(tokeniser);
-    function->function_name = identifier.string;
-    function->function_name_length = identifier.string_length;
+    function->identifier = identifier.string;
+    function->identifier_length = identifier.string_length;
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_OPEN) {
         ParserFail(tokeniser, "Expected (", 0);
@@ -319,11 +379,22 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     }
     GetNextTokenAndAdvance(tokeniser);
     
+    // Note(abi): Assumes at least one statement present in function
     function->child = ParseStatement(tokeniser);
+    AstNode * previous_statement = function->child;
     
-    if(PeekToken(tokeniser->buffer).type != TOKEN_BRACE_CLOSE) {
-        ParserFail(tokeniser, "Expected }", 0);
-        return 0;
+    Token next_token = PeekToken(tokeniser->buffer);
+    while(next_token.type && next_token.type != TOKEN_BRACE_CLOSE) {
+        previous_statement->child = ParseStatement(tokeniser);
+        previous_statement = previous_statement->child;
+        next_token = PeekToken(tokeniser->buffer);
+    }
+    
+    if(next_token.type == TOKEN_INVALID) {
+        ParserFail(tokeniser, "Unexpected end of file in function (todo post name)", 0);
+    }
+    else if(next_token.type == TOKEN_BRACE_CLOSE) {
+        GetNextTokenAndAdvance(tokeniser);
     }
     
     return function;
@@ -354,7 +425,7 @@ void PrettyPrintAST(AstNode * node, int depth) {
         
         case AST_NODE_FUNCTION: {
             PrintDepthTabs(depth);
-            printf("FUNC INT %.*s:\n", node->function_name_length, node->function_name);
+            printf("FUNC INT %.*s:\n", node->identifier_length, node->identifier);
             PrintDepthTabs(depth);
             printf("\tparams: ()\n");
             PrintDepthTabs(depth);
@@ -365,11 +436,28 @@ void PrettyPrintAST(AstNode * node, int depth) {
         
         case AST_NODE_STATEMENT: {
             PrintDepthTabs(depth);
-            
-            printf("RETURN ");
-            // Note(abiab): whilst only printing expressions, depth is irrelevant here
-            PrettyPrintAST(node->child, depth);
-            printf("\n");
+            switch (node->statement_type) {
+                case STATEMENT_RETURN: {
+                    printf("RETURN ");
+                    PrettyPrintAST(node->right_child, depth);
+                    printf("\n");
+                } break;
+                
+                case STATEMENT_DECLARATION: {
+                    printf("DECL INT %.*s", node->identifier_length, node->identifier);
+                    if(node->right_child) {
+                        printf(" = ");
+                        PrettyPrintAST(node->right_child, depth);
+                    }
+                    printf("\n");
+                } break;
+                
+                case STATEMENT_EXPRESSION: {
+                    PrettyPrintAST(node->right_child, depth);
+                    printf("\n");
+                } break;
+            }
+            if(node->child) PrettyPrintAST(node->child, depth);
         } break;
         
         case AST_NODE_EXPRESSION: {
@@ -411,6 +499,8 @@ void PrettyPrintAST(AstNode * node, int depth) {
                 case OPERATOR_LESS_OR_EQUAL: printf("LEQ("); break;
                 case OPERATOR_GREATER_THAN: printf("GT("); break;
                 case OPERATOR_GREATER_OR_EQUAL: printf("GEQ("); break;
+                
+                case OPERATOR_ASSIGN: printf("ASSIGN("); break;
             }
             PrettyPrintAST(node->left_child, depth);
             printf(", ");
@@ -427,6 +517,10 @@ void PrettyPrintAST(AstNode * node, int depth) {
             else {
                 printf("INT<%d>", node->int_literal_value);
             }
+        } break;
+        
+        case AST_NODE_VARIABLE: {
+            printf("VAR INT<%.*s>", node->identifier_length, node->identifier);
         } break;
     }
 }

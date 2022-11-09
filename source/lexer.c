@@ -36,6 +36,8 @@ enum TokenType {
     TOKEN_LESS_OR_EQUAL,
     TOKEN_GREATER_THAN,
     TOKEN_GREATER_OR_EQUAL,
+    
+    TOKEN_ASSIGN,
 };
 
 typedef struct Token Token;
@@ -157,6 +159,10 @@ void PrintToken(Token token) {
             printf("TOKEN: '>=' (%d)\n", token.type);
         } break;
         
+        case (TOKEN_ASSIGN): {
+            printf("TOKEN: '=' (%d)\n", token.type);
+        } break;
+        
         default: {
             printf("[Error] token (%d) has not been added to print function\n", token.type);
         }
@@ -265,7 +271,7 @@ Token PeekToken(char * string) {
                 token.string = cursor;
                 char * tail = cursor;
                 tail++;
-                while(CharIsLetter(*tail) || CharIsDigit(*tail)) {
+                while(CharIsLetter(*tail) || CharIsDigit(*tail) || *tail == '_') {
                     tail++;
                 }
                 
@@ -406,6 +412,11 @@ Token PeekToken(char * string) {
                     token.type = TOKEN_EQUALS;
                     token.string = cursor;
                     token.string_length = 2;
+                } 
+                else {
+                    token.type = TOKEN_ASSIGN;
+                    token.string = cursor;
+                    token.string_length = 1;
                 }
                 
                 goto found_token;
@@ -470,6 +481,7 @@ Token PeekToken(char * string) {
 Token GetNextTokenAndAdvance(Tokeniser * tokeniser) {
     while(CharIsWhiteSpace(*tokeniser->buffer)) {
         if(*tokeniser->buffer == '\n') tokeniser->line_number++;
+        
         tokeniser->buffer++;
     }
     Token token = PeekToken(tokeniser->buffer);
