@@ -69,6 +69,8 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     GenerateAsmFromAst(file, root);
     fclose(file);
     
+    if (generation_failed) return 1;
+    
     char gcc_call[1024];
     sprintf(gcc_call, "gcc -g %s -o %s", intermediate_assembly_path, output_path);
     
@@ -78,6 +80,7 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
         system("rm assembly.s");
     }
 #endif
+    
     return 0;
 }
 

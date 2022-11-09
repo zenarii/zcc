@@ -320,6 +320,9 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
             GetNextTokenAndAdvance(tokeniser);
             statement->right_child = ParseExpression(tokeniser, 0);
         }
+        else if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+            ParserFail(tokeniser, "Declared variable must be followed by '=' or ';'", TOKEN_SEMICOLON);
+        }
         
         if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
             ParserFail(tokeniser, "Expected ';' at end of declaration", TOKEN_SEMICOLON);
@@ -384,7 +387,7 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     AstNode * previous_statement = function->child;
     
     Token next_token = PeekToken(tokeniser->buffer);
-    while(next_token.type && next_token.type != TOKEN_BRACE_CLOSE) {
+    while(next_token.type && next_token.type != TOKEN_BRACE_CLOSE && previous_statement) {
         previous_statement->child = ParseStatement(tokeniser);
         previous_statement = previous_statement->child;
         next_token = PeekToken(tokeniser->buffer);

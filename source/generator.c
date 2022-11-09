@@ -6,6 +6,8 @@ int NewLabel() {
     return label_number++;
 }
 
+int generation_failed;
+
 //
 // ~Code Generation
 //
@@ -168,6 +170,7 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                     if(HashmapContains(&map, node->identifier, node->identifier_length)) {
                         // TODO(abi): generation failed function?
                         printf("[Error] %.*s already declared in this scope\n", node->identifier_length, node->identifier);
+                        generation_failed = 1;
                         break;
                     }
                     
@@ -250,6 +253,7 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                     AstNode * variable = node->left_child;
                     if(!HashmapContains(&map, variable->identifier, variable->identifier_length)) {
                         printf("[Error] %.*s undeclared\n", variable->identifier_length, variable->identifier);
+                        generation_failed = 1;
                     }
                     int stack_index = HashmapGet(&map, variable->identifier, variable->identifier_length);
                     fprintf(file, "movq %%rax, %d(%%rbp)\n", stack_index);

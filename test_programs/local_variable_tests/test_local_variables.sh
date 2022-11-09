@@ -38,3 +38,12 @@ test_program unused_expression.c 0
 echo
 
 echo "[Info] testing invalid code"
+test_invalid invalid-bad_declaration.c
+test_invalid invalid-bad_declaration_2.c
+test_invalid invalid-bad_declaration_3.c
+test_invalid invalid-bad_lvalue.c
+test_invalid invalid-bad_lvalue_2.c
+test_invalid invalid-late_declaration
+test_invalid invalid-no_semicolon.c
+test_invalid invalid-redeclaration.c
+test_invalid invalid-undeclared_var.c
