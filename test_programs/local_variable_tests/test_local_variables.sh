@@ -30,7 +30,7 @@ function test_invalid() {
 echo "[Info] testing valid code"
 test_program a_equals_1.c 1
 test_program assign_a_as_b.c 2
-test_program assign_without_declaration.c 2
+test_program assign_without_initialisation.c 2
 test_program refer.c 25
 test_program return_constant.c 5
 test_program return_expression.c 3

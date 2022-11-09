@@ -1,5 +1,6 @@
-#define OUTPUT_FILE 
+#include "hashmap.c"
 
+// TODO(abi): have seperate labels for the different used label types? i.e and, or, if etc
 int NewLabel() {
     static int label_number;
     return label_number++;
@@ -133,6 +134,9 @@ void GenerateAsmArithmeticOperator(FILE * file, AstNode * node) {
     }
 }
 
+static Hashmap map;
+static int stack_index;
+
 void GenerateAsmFromAst(FILE * file, AstNode * node) {
     switch (node->type) {
         case AST_NODE_PROGRAM: {
@@ -142,6 +146,10 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
         case AST_NODE_FUNCTION: {
             fprintf(file, ".globl %.*s\n", node->identifier_length, node->identifier);
             fprintf(file, "%.*s:\n", node->identifier_length, node->identifier);
+            // Note(abi): function prologue
+            fprintf(file, "push %%rbp\n");
+            fprintf(file, "movq %%rsp, %%rbp\n");
+            // Note(abi): Generate Function Body
             GenerateAsmFromAst(file, node->child);
         } break;
         
@@ -149,13 +157,39 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
             switch (node->statement_type) {
                 case STATEMENT_RETURN: {
                     GenerateAsmFromAst(file, node->right_child);
+                    // Generate function epilogue
+                    fprintf(file, "movq %%rbp, %%rsp\n");
+                    fprintf(file, "pop %%rbp\n");
+                    
                     fprintf(file, "ret\n");
                 } break;
                 
                 case STATEMENT_DECLARATION: {
+                    if(HashmapContains(&map, node->identifier, node->identifier_length)) {
+                        // TODO(abi): generation failed function?
+                        printf("[Error] %.*s already declared in this scope\n", node->identifier_length, node->identifier);
+                        break;
+                    }
+                    
+                    if(node->right_child) {
+                        GenerateAsmFromAst(file, node->right_child);
+                        fprintf(file, "push %%rax\n");
+                        HashmapPut(&map, node->identifier, node->identifier_length, stack_index);
+                        stack_index -= 8;
+                    }
+                    else {
+                        fprintf(file, "push $0\n");
+                        HashmapPut(&map, node->identifier, node->identifier_length, stack_index);
+                        stack_index -= 8;
+                    }
                     
                 } break;
+                
+                case STATEMENT_EXPRESSION: {
+                    GenerateAsmFromAst(file, node->right_child);
+                } break;
             }
+            if(node->child) GenerateAsmFromAst(file, node->child);
         } break;
         
         case AST_NODE_EXPRESSION: {
@@ -210,6 +244,16 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                 case OPERATOR_AND: {
                     GenerateAsmShortCircuitOperator(file, node);
                 } break;
+                
+                case OPERATOR_ASSIGN: {
+                    GenerateAsmFromAst(file, node->right_child);
+                    AstNode * variable = node->left_child;
+                    if(!HashmapContains(&map, variable->identifier, variable->identifier_length)) {
+                        printf("[Error] %.*s undeclared\n", variable->identifier_length, variable->identifier);
+                    }
+                    int stack_index = HashmapGet(&map, variable->identifier, variable->identifier_length);
+                    fprintf(file, "movq %%rax, %d(%%rbp)\n", stack_index);
+                } break;
             }
         } break;
         
@@ -220,6 +264,11 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
             } else {
                 fprintf(file, "movq $%d, %%rax\n", node->int_literal_value); 
             }
+        } break;
+        
+        case AST_NODE_VARIABLE: {
+            int stack_index = HashmapGet(&map, node->identifier, node->identifier_length);
+            fprintf(file, "movq %d(%%rbp), %%rax\n", stack_index);
         } break;
     }
 }
