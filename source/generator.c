@@ -155,6 +155,29 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
             GenerateAsmFromAst(file, node->child);
         } break;
         
+        case AST_NODE_DECLARATION: {
+            if(HashmapContains(&map, node->identifier, node->identifier_length)) {
+                // TODO(abi): generation failed function?
+                printf("[Error] %.*s already declared in this scope\n", node->identifier_length, node->identifier);
+                generation_failed = 1;
+                break;
+            }
+            
+            if(node->right_child) {
+                GenerateAsmFromAst(file, node->right_child);
+                fprintf(file, "push %%rax\n");
+                HashmapPut(&map, node->identifier, node->identifier_length, stack_index);
+                stack_index -= 8;
+            }
+            else {
+                fprintf(file, "push $0\n");
+                HashmapPut(&map, node->identifier, node->identifier_length, stack_index);
+                stack_index -= 8;
+            }
+            
+            if(node->child) GenerateAsmFromAst(file, node->child);
+        } break;
+        
         case AST_NODE_STATEMENT: {
             switch (node->statement_type) {
                 case STATEMENT_RETURN: {
@@ -164,28 +187,6 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                     fprintf(file, "pop %%rbp\n");
                     
                     fprintf(file, "ret\n");
-                } break;
-                
-                case STATEMENT_DECLARATION: {
-                    if(HashmapContains(&map, node->identifier, node->identifier_length)) {
-                        // TODO(abi): generation failed function?
-                        printf("[Error] %.*s already declared in this scope\n", node->identifier_length, node->identifier);
-                        generation_failed = 1;
-                        break;
-                    }
-                    
-                    if(node->right_child) {
-                        GenerateAsmFromAst(file, node->right_child);
-                        fprintf(file, "push %%rax\n");
-                        HashmapPut(&map, node->identifier, node->identifier_length, stack_index);
-                        stack_index -= 8;
-                    }
-                    else {
-                        fprintf(file, "push $0\n");
-                        HashmapPut(&map, node->identifier, node->identifier_length, stack_index);
-                        stack_index -= 8;
-                    }
-                    
                 } break;
                 
                 case STATEMENT_EXPRESSION: {

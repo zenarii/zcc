@@ -59,6 +59,7 @@ enum AstNodeType {
     AST_NODE_PROGRAM,
     AST_NODE_FUNCTION,
     AST_NODE_STATEMENT,
+    AST_NODE_DECLARATION,
     AST_NODE_EXPRESSION,
     AST_NODE_BINARY_OPERATOR,
     AST_NODE_UNARY_OPERATOR,
@@ -98,7 +99,6 @@ enum StatementType {
     
     STATEMENT_RETURN,
     STATEMENT_EXPRESSION,
-    STATEMENT_DECLARATION,
 };
 
 typedef struct AstNode AstNode;
@@ -196,7 +196,7 @@ OperatorType BinaryOperatorType(TokenType token_type) {
 //
 // ~Parsing Functions
 //
-
+void PrettyPrintAST(AstNode *, int);
 AstNode * ParseExpression(Tokeniser * tokeniser, int min_precedence);
 
 AstNode * ParseAtom(Tokeniser * tokeniser) {
@@ -301,36 +301,7 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
             return 0;
         }
         GetNextTokenAndAdvance(tokeniser);
-    }
-    else if(PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_INT) {
-        // Note(abi): declaration
-        GetNextTokenAndAdvance(tokeniser);
-        statement->statement_type = STATEMENT_DECLARATION;
-        
-        if(PeekToken(tokeniser->buffer).type != TOKEN_IDENTIFIER) {
-            ParserFail(tokeniser, "Tried to declare variable with no identifier", TOKEN_SEMICOLON);
-            return 0;
-        }
-        
-        Token identifier = GetNextTokenAndAdvance(tokeniser);
-        statement->identifier = identifier.string;
-        statement->identifier_length = identifier.string_length;
-        
-        if(PeekToken(tokeniser->buffer).type == TOKEN_ASSIGN) {
-            GetNextTokenAndAdvance(tokeniser);
-            statement->right_child = ParseExpression(tokeniser, 0);
-        }
-        else if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-            ParserFail(tokeniser, "Declared variable must be followed by '=' or ';'", TOKEN_SEMICOLON);
-        }
-        
-        if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-            ParserFail(tokeniser, "Expected ';' at end of declaration", TOKEN_SEMICOLON);
-            return 0;
-        }
-        GetNextTokenAndAdvance(tokeniser);
-    }
-    else {
+    } else {
         // Note(abi): expression
         statement->statement_type = STATEMENT_EXPRESSION;
         statement->right_child = ParseExpression(tokeniser, 0);
@@ -344,6 +315,43 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     return statement;
 };
 
+AstNode * ParseDeclaration(Tokeniser * tokeniser) {
+    AstNode * declaration = &nodes[node_count++];
+    declaration->type = AST_NODE_DECLARATION;
+    
+    // TODO(abiab): Asserts?
+    if(PeekToken(tokeniser->buffer).type != TOKEN_KEYWORD_INT) {
+        printf("[Internal Error] Parsing declaration but first token wasn't INT keyword\n");
+        parse_failed = 1;
+    }
+    GetNextTokenAndAdvance(tokeniser);
+    
+    if(PeekToken(tokeniser->buffer).type != TOKEN_IDENTIFIER) {
+        ParserFail(tokeniser, "Tried to declare variable with no identifier", TOKEN_SEMICOLON);
+        return 0;
+    }
+    
+    Token identifier = GetNextTokenAndAdvance(tokeniser);
+    declaration->identifier = identifier.string;
+    declaration->identifier_length = identifier.string_length;
+    
+    if(PeekToken(tokeniser->buffer).type == TOKEN_ASSIGN) {
+        GetNextTokenAndAdvance(tokeniser);
+        declaration->right_child = ParseExpression(tokeniser, 0);
+    }
+    else if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+        ParserFail(tokeniser, "Declared variable must be followed by '=' or ';'", TOKEN_SEMICOLON);
+    }
+    
+    if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+        ParserFail(tokeniser, "Expected ';' at end of declaration", TOKEN_SEMICOLON);
+        return 0;
+    }
+    GetNextTokenAndAdvance(tokeniser);
+    
+    return declaration;
+}
+
 AstNode * ParseFunction(Tokeniser * tokeniser) {
     AstNode * function = &nodes[node_count++];
     function->type = AST_NODE_FUNCTION;
@@ -352,7 +360,6 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
         ParserFail(tokeniser, "Expected keyword int", 0);
         return 0;
     }
-    
     GetNextTokenAndAdvance(tokeniser);
     
     if(PeekToken(tokeniser->buffer).type != TOKEN_IDENTIFIER) {
@@ -382,13 +389,14 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
     }
     GetNextTokenAndAdvance(tokeniser);
     
-    // Note(abi): Assumes at least one statement present in function
-    function->child = ParseStatement(tokeniser);
+    // Note(abi): Assumes at least one statement or declaration present in function
+    function->child = PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_INT ? ParseDeclaration(tokeniser) : ParseStatement(tokeniser);
     AstNode * previous_statement = function->child;
     
     Token next_token = PeekToken(tokeniser->buffer);
     while(next_token.type && next_token.type != TOKEN_BRACE_CLOSE && previous_statement) {
-        previous_statement->child = ParseStatement(tokeniser);
+        previous_statement->child = (next_token.type == TOKEN_KEYWORD_INT) ? ParseDeclaration(tokeniser) : ParseStatement(tokeniser);
+        
         previous_statement = previous_statement->child;
         next_token = PeekToken(tokeniser->buffer);
     }
@@ -406,8 +414,7 @@ AstNode * ParseFunction(Tokeniser * tokeniser) {
 AstNode * ParseProgram(Tokeniser * tokeniser) {
     AstNode * node = &nodes[node_count++];
     node->type = AST_NODE_PROGRAM;
-    //parse function,
-    //if the tokens do not form a function, fail
+    
     node->child = ParseFunction(tokeniser);
     
     return node;
@@ -437,21 +444,25 @@ void PrettyPrintAST(AstNode * node, int depth) {
             PrettyPrintAST(node->child, depth+2);
         } break;
         
+        case AST_NODE_DECLARATION: {
+            PrintDepthTabs(depth);
+            
+            printf("DECL INT %.*s", node->identifier_length, node->identifier);
+            if(node->right_child) {
+                printf(" = ");
+                PrettyPrintAST(node->right_child, depth);
+            }
+            printf("\n");
+            
+            if(node->child) PrettyPrintAST(node->child, depth);
+        } break;
+        
         case AST_NODE_STATEMENT: {
             PrintDepthTabs(depth);
             switch (node->statement_type) {
                 case STATEMENT_RETURN: {
                     printf("RETURN ");
                     PrettyPrintAST(node->right_child, depth);
-                    printf("\n");
-                } break;
-                
-                case STATEMENT_DECLARATION: {
-                    printf("DECL INT %.*s", node->identifier_length, node->identifier);
-                    if(node->right_child) {
-                        printf(" = ");
-                        PrettyPrintAST(node->right_child, depth);
-                    }
                     printf("\n");
                 } break;
                 
