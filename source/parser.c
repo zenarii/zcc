@@ -99,30 +99,33 @@ enum StatementType {
     
     STATEMENT_RETURN,
     STATEMENT_EXPRESSION,
+    STATEMENT_IF,
+    STATEMENT_ELSE,
 };
 
 typedef struct AstNode AstNode;
 struct AstNode {
     AstNodeType type;
-    // TODO(abi): remove?
-    int subtype;
     
+    // for statements/declarations/functions, next statement
+    // for unary operators, 
     AstNode * child;
-    // TODO(abi): for binary operators
+    
+    // TODO(abi): for operators
     AstNode * left_child;
     AstNode * right_child;
+    OperatorType operator_type;
     
-    // for function declaration
+    // for functions,  declarations
     char * identifier;
     int identifier_length;
     
-    // for integer literal
     int int_literal_value;
     
-    // for unary operator
-    OperatorType operator_type;
-    
     StatementType statement_type;
+    // for if statements
+    AstNode * condition;
+    AstNode * else_child;
 };
 
 
@@ -291,7 +294,8 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
     AstNode * statement = &nodes[node_count++];
     statement->type = AST_NODE_STATEMENT;
     
-    if(PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_RETURN) {
+    TokenType next_token_type = PeekToken(tokeniser->buffer).type;
+    if(next_token_type == TOKEN_KEYWORD_RETURN) {
         GetNextTokenAndAdvance(tokeniser);
         statement->statement_type = STATEMENT_RETURN;
         statement->right_child = ParseExpression(tokeniser, 0);
@@ -301,6 +305,35 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
             return 0;
         }
         GetNextTokenAndAdvance(tokeniser);
+    }
+    else if(next_token_type == TOKEN_KEYWORD_IF)  {
+        GetNextTokenAndAdvance(tokeniser);
+        
+        statement->statement_type = STATEMENT_IF;
+        if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_OPEN) {
+            ParserFail(tokeniser, "Require '(' after 'if' keyword\n", TOKEN_SEMICOLON);
+            return 0;
+        }
+        GetNextTokenAndAdvance(tokeniser);
+        
+        statement->condition = ParseExpression(tokeniser, 0);
+        
+        if(PeekToken(tokeniser->buffer).type != TOKEN_PARENTHESIS_CLOSE) {
+            ParserFail(tokeniser, "Require ')' to close if condition\n", TOKEN_SEMICOLON);
+            return 0;
+        }
+        GetNextTokenAndAdvance(tokeniser);
+        
+        statement->child = ParseStatement(tokeniser);
+        
+        if(PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_ELSE) {
+            GetNextTokenAndAdvance(tokeniser);
+            statement->else_child = ParseStatement(tokeniser);
+        }
+    }
+    else if(next_token_type == TOKEN_KEYWORD_ELSE) {
+        ParserFail(tokeniser, "Unexpected else statement without matching if\n", TOKEN_SEMICOLON);
+        return 0;
     } else {
         // Note(abi): expression
         statement->statement_type = STATEMENT_EXPRESSION;
@@ -464,6 +497,19 @@ void PrettyPrintAST(AstNode * node, int depth) {
                     printf("RETURN ");
                     PrettyPrintAST(node->right_child, depth);
                     printf("\n");
+                } break;
+                
+                case STATEMENT_IF: {
+                    printf("IF ");
+                    PrettyPrintAST(node->condition, depth);
+                    printf("\n");
+                    PrettyPrintAST(node->child, depth+1);
+                    
+                    if(node->else_child) {
+                        PrintDepthTabs(depth);
+                        printf("ELSE\n");
+                        PrettyPrintAST(node->else_child, depth+1);
+                    }
                 } break;
                 
                 case STATEMENT_EXPRESSION: {
