@@ -13,6 +13,8 @@ enum TokenType {
     
     TOKEN_KEYWORD_INT,
     TOKEN_KEYWORD_RETURN,
+    TOKEN_KEYWORD_IF,
+    TOKEN_KEYWORD_ELSE,
     
     TOKEN_IDENTIFIER,
     TOKEN_LITERAL_INT,
@@ -38,6 +40,9 @@ enum TokenType {
     TOKEN_GREATER_OR_EQUAL,
     
     TOKEN_ASSIGN,
+    
+    TOKEN_QUESTION,
+    TOKEN_COLON,
 };
 
 typedef struct Token Token;
@@ -85,6 +90,14 @@ void PrintToken(Token token) {
         
         case (TOKEN_KEYWORD_INT): {
             printf("TOKEN: KEYWORD: INT (%i)\n", token.type);
+        } break;
+        
+        case (TOKEN_KEYWORD_IF): {
+            printf("TOKEN: KEYWORD: IF (%i)\n", token.type);
+        } break;
+        
+        case (TOKEN_KEYWORD_ELSE): {
+            printf("TOKEN: KEYWORD: ELSE (%i)\n", token.type);
         } break;
         
         case (TOKEN_KEYWORD_RETURN): {
@@ -161,6 +174,14 @@ void PrintToken(Token token) {
         
         case (TOKEN_ASSIGN): {
             printf("TOKEN: '=' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_QUESTION): {
+            printf("TOKEN: '?' (%d)\n", token.type);
+        } break;
+        
+        case (TOKEN_COLON): {
+            printf("TOKEN: ':' (%d)\n", token.type);
         } break;
         
         default: {
@@ -282,6 +303,11 @@ Token PeekToken(char * string) {
                     token.type = TOKEN_KEYWORD_INT;
                 else if(StringCompareN(token.string, "return", MAX(token.string_length, 6)))
                     token.type = TOKEN_KEYWORD_RETURN;
+                else if(StringCompareN(token.string, "if", MAX(token.string_length, 2)))
+                    token.type = TOKEN_KEYWORD_IF;
+                else if(StringCompareN(token.string, "else", MAX(token.string_length, 4)))
+                    token.type = TOKEN_KEYWORD_ELSE;
+                
                 
                 goto found_token;
             } break;
@@ -466,6 +492,22 @@ Token PeekToken(char * string) {
                     token.string = cursor;
                     token.string_length = 1;
                 }
+                
+                goto found_token;
+            } break;
+            
+            case ':': {
+                token.type = TOKEN_COLON;
+                token.string = cursor;
+                token.string_length = 1;
+                
+                goto found_token;
+            } break;
+            
+            case '?': {
+                token.type = TOKEN_QUESTION;
+                token.string = cursor;
+                token.string_length = 1;
                 
                 goto found_token;
             } break;
