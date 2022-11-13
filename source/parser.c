@@ -125,7 +125,8 @@ struct AstNode {
     StatementType statement_type;
     // for if statements
     AstNode * condition;
-    AstNode * else_child;
+    AstNode * if_block;
+    AstNode * else_block;
 };
 
 
@@ -324,11 +325,11 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
         }
         GetNextTokenAndAdvance(tokeniser);
         
-        statement->child = ParseStatement(tokeniser);
+        statement->if_block = ParseStatement(tokeniser);
         
         if(PeekToken(tokeniser->buffer).type == TOKEN_KEYWORD_ELSE) {
             GetNextTokenAndAdvance(tokeniser);
-            statement->else_child = ParseStatement(tokeniser);
+            statement->else_block = ParseStatement(tokeniser);
         }
     }
     else if(next_token_type == TOKEN_KEYWORD_ELSE) {
@@ -503,12 +504,12 @@ void PrettyPrintAST(AstNode * node, int depth) {
                     printf("IF ");
                     PrettyPrintAST(node->condition, depth);
                     printf("\n");
-                    PrettyPrintAST(node->child, depth+1);
+                    PrettyPrintAST(node->if_block, depth+1);
                     
-                    if(node->else_child) {
+                    if(node->else_block) {
                         PrintDepthTabs(depth);
                         printf("ELSE\n");
-                        PrettyPrintAST(node->else_child, depth+1);
+                        PrettyPrintAST(node->else_block, depth+1);
                     }
                 } break;
                 

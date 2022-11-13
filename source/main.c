@@ -53,7 +53,7 @@ int Compile(const char * path, const char * output_path, int delete_asm) {
     AstNode * root = ParseProgram(&tokeniser);
     if(parse_failed) return 1;
     
-#if 1
+#if 0
     PrettyPrintAST(root, 0);
 #endif
     

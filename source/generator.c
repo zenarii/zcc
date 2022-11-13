@@ -192,7 +192,30 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                 case STATEMENT_EXPRESSION: {
                     GenerateAsmFromAst(file, node->right_child);
                 } break;
+                
+                case STATEMENT_IF: {
+                    int label = NewLabel();
+                    // Move conditional value into %rax
+                    GenerateAsmFromAst(file, node->condition);
+                    fprintf(file, "cmpq $0, %%rax\n");
+                    
+                    if(!node->else_block) {
+                        fprintf(file, "je _if%d_end\n", label); //i.e if false jump
+                        GenerateAsmFromAst(file, node->if_block);
+                        fprintf(file, "_if%d_end:\n", label);
+                    }
+                    else { 
+                        fprintf(file, "je _if%d_else\n", label);
+                        GenerateAsmFromAst(file, node->if_block);
+                        fprintf(file, "jmp _if%d_end\n", label);
+                        
+                        fprintf(file, "_if%d_else:\n", label);
+                        GenerateAsmFromAst(file, node->else_block);
+                        fprintf(file, "_if%d_end:\n", label);
+                    }
+                } break;
             }
+            
             if(node->child) GenerateAsmFromAst(file, node->child);
         } break;
         
