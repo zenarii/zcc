@@ -20,6 +20,7 @@ static Parselet parselets[] = {
     {TOKEN_MINUS,            11, ASSOCIATE_LEFT},
     {TOKEN_STAR,             13, ASSOCIATE_LEFT},
     {TOKEN_SLASH_FORWARD,    13, ASSOCIATE_LEFT},
+    {TOKEN_PERCENT,          13, ASSOCIATE_LEFT},
     {TOKEN_OR,                3, ASSOCIATE_LEFT},
     {TOKEN_AND,               5, ASSOCIATE_LEFT},
     {TOKEN_EQUALS,            7, ASSOCIATE_LEFT},
@@ -37,14 +38,15 @@ Parselet ParseletLookUp(TokenType type) {
         case TOKEN_MINUS:            return parselets[1];
         case TOKEN_STAR:             return parselets[2];
         case TOKEN_SLASH_FORWARD:    return parselets[3];
-        case TOKEN_OR:               return parselets[4];
-        case TOKEN_AND:              return parselets[5];
-        case TOKEN_EQUALS:           return parselets[6];
-        case TOKEN_NOT_EQUAL:        return parselets[7];
-        case TOKEN_LESS_THAN:        return parselets[8];
-        case TOKEN_LESS_OR_EQUAL:    return parselets[9];
-        case TOKEN_GREATER_THAN:     return parselets[10];
-        case TOKEN_GREATER_OR_EQUAL: return parselets[11];
+        case TOKEN_PERCENT:          return parselets[4];
+        case TOKEN_OR:               return parselets[5];
+        case TOKEN_AND:              return parselets[6];
+        case TOKEN_EQUALS:           return parselets[7];
+        case TOKEN_NOT_EQUAL:        return parselets[8];
+        case TOKEN_LESS_THAN:        return parselets[9];
+        case TOKEN_LESS_OR_EQUAL:    return parselets[10];
+        case TOKEN_GREATER_THAN:     return parselets[11];
+        case TOKEN_GREATER_OR_EQUAL: return parselets[12];
     }
 }
 
@@ -168,7 +170,8 @@ int IsBinaryOperator(TokenType type) {
             (type == TOKEN_GREATER_OR_EQUAL) ||
             (type == TOKEN_LESS_THAN) ||
             (type == TOKEN_LESS_OR_EQUAL) ||
-            (type == TOKEN_ASSIGN));
+            (type == TOKEN_ASSIGN) ||
+            (type == TOKEN_PERCENT));
 }
 
 OperatorType UnaryOperatorType(TokenType token_type) {
@@ -182,9 +185,10 @@ OperatorType UnaryOperatorType(TokenType token_type) {
 OperatorType BinaryOperatorType(TokenType token_type) {
     switch (token_type) {
         case TOKEN_STAR:             return OPERATOR_MULTIPLY;
+        case TOKEN_SLASH_FORWARD:    return OPERATOR_DIVIDE;
+        case TOKEN_PERCENT:          return OPERATOR_MODULO;
         case TOKEN_PLUS:             return OPERATOR_PLUS;
         case TOKEN_MINUS:            return OPERATOR_MINUS_BINARY;
-        case TOKEN_SLASH_FORWARD:    return OPERATOR_DIVIDE;
         case TOKEN_EQUALS:           return OPERATOR_EQUALS;
         case TOKEN_NOT_EQUAL:        return OPERATOR_NOT_EQUAL;
         case TOKEN_OR:               return OPERATOR_OR;

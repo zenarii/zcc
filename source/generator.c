@@ -133,6 +133,16 @@ void GenerateAsmArithmeticOperator(FILE * file, AstNode * node) {
             fprintf(file, "cqo\n");
             fprintf(file, "idiv %%rcx\n");
         } break;
+        
+        case OPERATOR_MODULO: {
+            fprintf(file, "push %%rax\n");
+            fprintf(file, "movq %%rcx, %%rax\n");
+            fprintf(file, "pop %%rcx\n");
+            
+            fprintf(file, "cqo\n");
+            fprintf(file, "idiv %%rcx\n");
+            fprintf(file, "movq %%rdx, %%rax\n");
+        } break;
     }
 }
 
@@ -254,7 +264,8 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                 case OPERATOR_PLUS:
                 case OPERATOR_MINUS_BINARY:
                 case OPERATOR_DIVIDE:
-                case OPERATOR_MULTIPLY: {
+                case OPERATOR_MULTIPLY:
+                case OPERATOR_MODULO: {
                     GenerateAsmArithmeticOperator(file, node);
                 } break;
                 

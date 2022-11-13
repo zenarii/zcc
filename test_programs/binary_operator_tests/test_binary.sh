@@ -42,6 +42,7 @@ test_program sub_neg.c 4
 test_program unary_operator_1.c 1
 test_program unary_operator_2.c 248
 test_program unary_operator_3.c 207
+test_program mod.c 2
 
 echo
 
