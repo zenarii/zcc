@@ -16,20 +16,21 @@ struct Parselet {
 };
 
 static Parselet parselets[] = {
-    {TOKEN_PLUS,             11, ASSOCIATE_LEFT},
-    {TOKEN_MINUS,            11, ASSOCIATE_LEFT},
-    {TOKEN_STAR,             13, ASSOCIATE_LEFT},
-    {TOKEN_SLASH_FORWARD,    13, ASSOCIATE_LEFT},
-    {TOKEN_PERCENT,          13, ASSOCIATE_LEFT},
-    {TOKEN_OR,                3, ASSOCIATE_LEFT},
-    {TOKEN_AND,               5, ASSOCIATE_LEFT},
-    {TOKEN_EQUALS,            7, ASSOCIATE_LEFT},
-    {TOKEN_NOT_EQUAL,         7, ASSOCIATE_LEFT},
-    {TOKEN_LESS_THAN,         9, ASSOCIATE_LEFT},
-    {TOKEN_LESS_OR_EQUAL,     9, ASSOCIATE_LEFT},
-    {TOKEN_GREATER_THAN,      9, ASSOCIATE_LEFT},
-    {TOKEN_GREATER_OR_EQUAL,  9, ASSOCIATE_LEFT},
+    {TOKEN_PLUS,             13, ASSOCIATE_LEFT},
+    {TOKEN_MINUS,            13, ASSOCIATE_LEFT},
+    {TOKEN_STAR,             15, ASSOCIATE_LEFT},
+    {TOKEN_SLASH_FORWARD,    15, ASSOCIATE_LEFT},
+    {TOKEN_PERCENT,          15, ASSOCIATE_LEFT},
+    {TOKEN_OR,                5, ASSOCIATE_LEFT},
+    {TOKEN_AND,               7, ASSOCIATE_LEFT},
+    {TOKEN_EQUALS,            9, ASSOCIATE_LEFT},
+    {TOKEN_NOT_EQUAL,         9, ASSOCIATE_LEFT},
+    {TOKEN_LESS_THAN,        11, ASSOCIATE_LEFT},
+    {TOKEN_LESS_OR_EQUAL,    11, ASSOCIATE_LEFT},
+    {TOKEN_GREATER_THAN,     11, ASSOCIATE_LEFT},
+    {TOKEN_GREATER_OR_EQUAL, 11, ASSOCIATE_LEFT},
     {TOKEN_ASSIGN,            1, ASSOCIATE_RIGHT},
+    {TOKEN_QUESTION,          3, ASSOCIATE_RIGHT},
 };
 
 Parselet ParseletLookUp(TokenType type) {
@@ -47,6 +48,10 @@ Parselet ParseletLookUp(TokenType type) {
         case TOKEN_LESS_OR_EQUAL:    return parselets[10];
         case TOKEN_GREATER_THAN:     return parselets[11];
         case TOKEN_GREATER_OR_EQUAL: return parselets[12];
+        case TOKEN_ASSIGN:           return parselets[13];
+        case TOKEN_QUESTION:         return parselets[14];
+        
+        default: *(int *)0 = 0;
     }
 }
 
@@ -93,6 +98,8 @@ enum OperatorType {
     OPERATOR_GREATER_OR_EQUAL,
     
     OPERATOR_ASSIGN,
+    
+    OPERATOR_TERNARY,
 };
 
 typedef enum StatementType StatementType;
@@ -171,7 +178,8 @@ int IsBinaryOperator(TokenType type) {
             (type == TOKEN_LESS_THAN) ||
             (type == TOKEN_LESS_OR_EQUAL) ||
             (type == TOKEN_ASSIGN) ||
-            (type == TOKEN_PERCENT));
+            (type == TOKEN_PERCENT) ||
+            (type == TOKEN_QUESTION));
 }
 
 OperatorType UnaryOperatorType(TokenType token_type) {
@@ -198,6 +206,7 @@ OperatorType BinaryOperatorType(TokenType token_type) {
         case TOKEN_GREATER_THAN:     return OPERATOR_GREATER_THAN;
         case TOKEN_GREATER_OR_EQUAL: return OPERATOR_GREATER_OR_EQUAL;
         case TOKEN_ASSIGN:           return OPERATOR_ASSIGN;
+        case TOKEN_QUESTION:         return OPERATOR_TERNARY;
     }
 }
 
@@ -276,6 +285,18 @@ AstNode * ParseExpression(Tokeniser * tokeniser, int min_precedence) {
         if(parselet.associativty == ASSOCIATE_LEFT)
             next_min_precedence += 1;
         
+        
+        // Note(abi): ternary-if special case
+        //            "? expr :" is functionally a binary operator of precedence ?
+        if(operator_type == OPERATOR_TERNARY) {
+            left_hand_side->if_block = ParseExpression(tokeniser, 0);
+            if(PeekToken(tokeniser->buffer).type != TOKEN_COLON) {
+                ParserFail(tokeniser, "Ternary expression must contain ':'", TOKEN_SEMICOLON);
+                return 0;
+            }
+            GetNextTokenAndAdvance(tokeniser);
+        }
+        
         AstNode * right_hand_side = ParseExpression(tokeniser, next_min_precedence);
         
         AstNode * new_left_hand_side = &nodes[node_count++];
@@ -306,6 +327,7 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
         statement->right_child = ParseExpression(tokeniser, 0);
         
         if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
+            PrintToken(PeekToken(tokeniser->buffer));
             ParserFail(tokeniser, "Expected ';' at end of return statement", TOKEN_BRACE_CLOSE);
             return 0;
         }
@@ -549,6 +571,17 @@ void PrettyPrintAST(AstNode * node, int depth) {
         } break;
         
         case AST_NODE_BINARY_OPERATOR: {
+            if(node->operator_type == OPERATOR_TERNARY) {
+                printf("TERNARY(cond: ");
+                PrettyPrintAST(node->left_child, depth);
+                printf(", e1: ");
+                PrettyPrintAST(node->left_child->if_block, depth);
+                printf(", e2: ");
+                PrettyPrintAST(node->right_child, depth);
+                printf(")");
+                break;
+            }
+            
             switch (node->operator_type) {
                 case OPERATOR_PLUS: printf("ADD("); break;
                 case OPERATOR_MULTIPLY: printf("MULT("); break;

@@ -28,10 +28,15 @@ function test_invalid() {
 
 
 echo "[Info] testing valid code"
-test_program else_if.c 4
-test_program if_one.c 1
-test_program is_even_assign_in_statement.c 1
-test_program is_even.c 0
+test_program ternary_true.c 1
+test_program ternary_false.c 0
+test_program is_even.c 1
+test_program assign_ternary.c 2
+test_program declare_ternary.c 3
+test_program nested_ternary.c 3
+test_program nested_ternary_2.c 15
+test_program assign_right.c 1
+
 echo
 
 echo "[Info] testing invalid code"

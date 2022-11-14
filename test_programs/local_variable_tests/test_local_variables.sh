@@ -35,6 +35,7 @@ test_program refer.c 25
 test_program return_constant.c 5
 test_program return_expression.c 3
 test_program unused_expression.c 0
+test_program a_equals_1_plus_1.c 2
 echo
 
 echo "[Info] testing invalid code"

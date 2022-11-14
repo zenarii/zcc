@@ -293,6 +293,19 @@ void GenerateAsmFromAst(FILE * file, AstNode * node) {
                     int stack_index = HashmapGet(&map, variable->identifier, variable->identifier_length);
                     fprintf(file, "movq %%rax, %d(%%rbp)\n", stack_index);
                 } break;
+                
+                case OPERATOR_TERNARY: {
+                    int label = NewLabel();
+                    // move condition into %%rax
+                    GenerateAsmFromAst(file, node->left_child);
+                    fprintf(file, "cmpq $0, %%rax\n");
+                    fprintf(file, "je _ternary%d_false\n", label);
+                    GenerateAsmFromAst(file, node->left_child->if_block);
+                    fprintf(file, "jmp _ternary%d_end\n", label);
+                    fprintf(file, "_ternary%d_false:\n", label);
+                    GenerateAsmFromAst(file, node->right_child);
+                    fprintf(file, "_ternary%d_end:\n", label);
+                } break;
             }
         } break;
         
