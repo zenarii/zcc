@@ -51,7 +51,9 @@ Parselet ParseletLookUp(TokenType type) {
         case TOKEN_ASSIGN:           return parselets[13];
         case TOKEN_QUESTION:         return parselets[14];
         
-        default: *(int *)0 = 0;
+        default: {
+            *(int *)0 = 0;
+        }
     }
 }
 
@@ -327,7 +329,6 @@ AstNode * ParseStatement(Tokeniser * tokeniser) {
         statement->right_child = ParseExpression(tokeniser, 0);
         
         if(PeekToken(tokeniser->buffer).type != TOKEN_SEMICOLON) {
-            PrintToken(PeekToken(tokeniser->buffer));
             ParserFail(tokeniser, "Expected ';' at end of return statement", TOKEN_BRACE_CLOSE);
             return 0;
         }
@@ -583,20 +584,20 @@ void PrettyPrintAST(AstNode * node, int depth) {
             }
             
             switch (node->operator_type) {
-                case OPERATOR_PLUS: printf("ADD("); break;
-                case OPERATOR_MULTIPLY: printf("MULT("); break;
-                case OPERATOR_MINUS_BINARY: printf("SUB("); break;
-                case OPERATOR_DIVIDE: printf("DIV("); break;
-                case OPERATOR_MODULO: printf("MOD("); break;
+                case OPERATOR_PLUS: printf("+("); break;
+                case OPERATOR_MULTIPLY: printf("*("); break;
+                case OPERATOR_MINUS_BINARY: printf("-("); break;
+                case OPERATOR_DIVIDE: printf("/("); break;
+                case OPERATOR_MODULO: printf("%("); break;
                 
-                case OPERATOR_EQUALS: printf("EQ("); break;
-                case OPERATOR_NOT_EQUAL: printf("NEQ("); break;
-                case OPERATOR_AND: printf("AND("); break;
-                case OPERATOR_OR: printf("OR("); break;
-                case OPERATOR_LESS_THAN: printf("LT("); break;
-                case OPERATOR_LESS_OR_EQUAL: printf("LEQ("); break;
-                case OPERATOR_GREATER_THAN: printf("GT("); break;
-                case OPERATOR_GREATER_OR_EQUAL: printf("GEQ("); break;
+                case OPERATOR_EQUALS: printf("==("); break;
+                case OPERATOR_NOT_EQUAL: printf("!=("); break;
+                case OPERATOR_AND: printf("&&("); break;
+                case OPERATOR_OR: printf("||("); break;
+                case OPERATOR_LESS_THAN: printf("<("); break;
+                case OPERATOR_LESS_OR_EQUAL: printf("<=("); break;
+                case OPERATOR_GREATER_THAN: printf(">("); break;
+                case OPERATOR_GREATER_OR_EQUAL: printf(">=("); break;
                 
                 case OPERATOR_ASSIGN: printf("ASSIGN("); break;
             }
@@ -610,7 +611,6 @@ void PrettyPrintAST(AstNode * node, int depth) {
             // factor either "(" <expression> ")" or <unary_operator> <factor>
             if(node->child) {
                 PrettyPrintAST(node->child, depth);
-                printf("hi");
             }
             else {
                 printf("INT<%d>", node->int_literal_value);
